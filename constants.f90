@@ -1,0 +1,548 @@
+!> Module with contants subroutine - computes carbonate system Ks from S,T,P 
+MODULE mconstants
+CONTAINS
+!> Compute thermodynamic constants
+!! FROM temperature, salinity, and pressure (1D arrays)
+SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
+                     K1p, K2p, K3p, Ksi,                      &
+                     St, Ft, Bt,                              &
+                     tempot, sal,                             &
+                     depth, lat, N,                           &
+                     optT, optP, optB, optK1K2, optKf)
+
+  !   Purpose:
+  !     Compute thermodynamic constants
+  !     FROM: temperature, salinity, and pressure (1D arrays)
+
+  !     INPUT variables:
+  !     ================
+  !     depth   = depth [m]     (with optP=0, i.e., for a z-coordinate model vertical grid is depth, not pressure)
+  !             = pressure [db] (with optP=1)
+  !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP=0)
+  !             = dummy array (unused when optP=1)
+  !     tempot  = potential temperature [degrees C] (with optT=0, i.e., models carry tempot, not temp)
+  !             = in situ   temperature [degrees C] (with optT=1, e.g., for data)
+  !     sal     = salinity in [psu]
+
+  !     optT: choose in situ vs. potential temperature as input
+  !     ---------
+  !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
+  !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
+  !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
+
+  !     optP: choose depth (m) vs pressure (db) as input
+  !     ---------
+  !       -> 'm'  means "depth" input is in "m" (thus in situ Pressure "p" [db] is computed)
+  !       -> 'db' means "depth" input is already in situ pressure [db], not m (p = depth)
+
+  !     optB:
+  !     ---------
+  !       -> 'u74' means use classic formulation of Uppström (1974) for total Boron
+  !       -> 'l10' means use   new formulation of Lee et al. (2010) for total Boron
+
+  !     optK1K2:
+  !     ---------
+  !       -> 'l'   means use Lueker et al. (2000) formulations for K1 & K2 (recommended by Dickson et al. 2007)
+  !                **** BUT this should only be used when 2 < T < 35 and 19 < S < 43
+  !       -> 'm10' means use Millero (2010) formulation for K1 & K2 (see Dickson et al., 2007)
+  !                **** Valid for 0 < T < 50°C and 1 < S < 50 psu
+
+  !     optKf:
+  !     ----------
+  !       -> 'pf' means use Perez & Fraga (1987) formulation for Kf (recommended by Dickson et al., 2007)
+  !               **** BUT Valid only for  9 < T < 33°C and 10 < S < 40.
+  !       -> 'dg' means use Dickson & Riley (1979) formulation for Kf (recommended by Dickson & Goyet, 1994)
+
+  !     OUTPUT variables:
+  !     =================
+  !     K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi
+  !     St, Ft, Bt
+
+  USE msingledouble
+  USE mp80
+  USE msw_temp
+  IMPLICIT NONE
+
+! Input variables
+  !>     number of records
+  INTEGER, INTENT(in) :: N
+  !> in <b>situ temperature</b> (when optT='Tinsitu', typical data) 
+  !! OR <b>potential temperature</b> (when optT='Tpot', typical models) [degree C]
+  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: tempot
+  !> depth in <b>meters</b> (when optP='m') or <b>decibars</b> (when optP='db')
+  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: depth
+  !> latitude <b>[degrees north]</b>
+  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: lat
+  !> salinity <b>[psu]</b>
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
+!f2py optional , depend(sal) :: n=len(sal)
+
+  !> for tempot input, choose \b 'Tinsitu' for in situ Temp or 
+  !! \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
+  CHARACTER(7), INTENT(in) :: optT
+  !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
+  CHARACTER(2), INTENT(in) :: optP
+  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
+  !! The 'l10' formulation is based on 139 measurements (instead of 20),
+  !! uses a more accurate method, and
+  !! generally increases total boron in seawater by 4% 
+  CHARACTER(3), INTENT(in) :: optB
+  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
+  CHARACTER(2), INTENT(in) :: optKf
+  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
+  CHARACTER(3), INTENT(in) :: optK1K2
+
+! Ouput variables
+  !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K0
+  !> K1 for the dissociation of carbonic acid from Lueker et al. (2000) or Millero (2010), depending on optK1K2
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K1
+  !> K2 for the dissociation of carbonic acid from Lueker et al. (2000) or Millero (2010), depending on optK1K2
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K2
+  !> equilibrium constant for dissociation of boric acid 
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kb
+  !> equilibrium constant for the dissociation of water (Millero, 1995)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kw
+  !> equilibrium constant for the dissociation of bisulfate (Dickson, 1990)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Ks
+  !> equilibrium constant for the dissociation of hydrogen fluoride 
+  !! either from Dickson and Riley (1979) or from Perez and Fraga (1987), depending on optKf
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kf
+  !> solubility product for calcite (Mucci, 1983)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kspc
+  !> solubility product for aragonite (Mucci, 1983)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kspa
+  !> 1st dissociation constant for phosphoric acid (Millero, 1995)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K1p
+  !> 2nd dissociation constant for phosphoric acid (Millero, 1995)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K2p
+  !> 3rd dissociation constant for phosphoric acid (Millero, 1995)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K3p
+  !> equilibrium constant for the dissociation of silicic acid (Millero, 1995)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Ksi
+  !> total sulfate (Morris & Riley, 1966)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: St
+  !> total fluoride  (Riley, 1965)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Ft
+  !> total boron
+  !! from either Uppstrom (1974) or Lee et al. (2010), depending on optB
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Bt
+
+! Local variables
+  REAL(kind=r4) :: ssal
+  REAL(kind=r4) :: p
+  REAL(kind=r4) :: tempis68, tempot68
+  REAL(kind=r4) :: tempis
+  REAL(kind=r8) :: is, invtk, dlogtk, is2, s2, sqrtis
+  REAL(kind=r8) :: Ks_0p, Kf_0p
+  REAL(kind=r8) :: total2free, free2SWS, total2SWS, SWS2total
+  REAL(kind=r8) :: total2free_0p, free2SWS_0p, total2SWS_0p
+! REAL(kind=r8) :: free2SWS, free2SWS_0p
+
+  REAL(kind=r8) :: R
+
+  REAL(kind=r8) :: pK1o, ma1, mb1, mc1, pK1
+  REAL(kind=r8) :: pK2o, ma2, mb2, mc2, pK2
+
+  REAL(kind=r8), DIMENSION(12) :: a0, a1, a2, b0, b1, b2
+  REAL(kind=r8), DIMENSION(12) :: deltav, deltak, lnkpok0
+  REAL(kind=r8) :: tmp, nK0we74
+
+  INTEGER :: i, icount, ipc
+
+  REAL(kind=r8) :: t, tk, prb
+  REAL(kind=r8) :: s, sqrts, s15, scl
+
+! REAL(kind=r4) ::   p80, sw_temp
+! EXTERNAL p80, sw_temp
+
+  ! CONSTANTS
+  ! =========
+  ! Constants in formulation for Pressure effect on K's (Millero, 95)
+  ! with corrected coefficients for Kb, Kw, Ksi, etc.
+
+  ! index: 1) K1 , 2) K2, 3) Kb, 4) Kw, 5) Ks, 6) Kf, 7) Kspc, 8) Kspa,
+  !            9) K1P, 10) K2P, 11) K3P, 12) Ksi
+
+  DATA a0 /-25.5_r8, -15.82_r8, -29.48_r8, -20.02_r8, &
+          -18.03_r8,  -9.78_r8, -48.76_r8, -46._r8, &
+          -14.51_r8, -23.12_r8, -26.57_r8, -29.48_r8/
+  DATA a1 /0.1271_r8, -0.0219_r8, 0.1622_r8, 0.1119_r8, &
+           0.0466_r8, -0.0090_r8, 0.5304_r8, 0.5304_r8, &
+           0.1211_r8, 0.1758_r8, 0.2020_r8, 0.1622_r8/
+  DATA a2 /     0.0_r8,       0.0_r8, -2.608e-3_r8, -1.409e-3_r8, &
+           0.316e-3_r8, -0.942e-3_r8,  0.0_r8,       0.0_r8, &
+          -0.321e-3_r8, -2.647e-3_r8, -3.042e-3_r8, -2.6080e-3_r8/
+  DATA b0 /-3.08e-3_r8, 1.13e-3_r8,  -2.84e-3_r8,   -5.13e-3_r8, &
+           -4.53e-3_r8, -3.91e-3_r8, -11.76e-3_r8, -11.76e-3_r8, &
+           -2.67e-3_r8, -5.15e-3_r8,  -4.08e-3_r8,  -2.84e-3_r8/
+  DATA b1 /0.0877e-3_r8, -0.1475e-3_r8, 0.0_r8,       0.0794e-3_r8, &
+           0.09e-3_r8,    0.054e-3_r8,  0.3692e-3_r8, 0.3692e-3_r8, &
+           0.0427e-3_r8,  0.09e-3_r8,   0.0714e-3_r8, 0.0_r8/
+  DATA b2 /12*0.0_r8/
+
+  R = 83.14472_r8
+
+  icount = 0
+  DO i = 1, N
+     icount = icount + 1
+!    ===============================================================
+!    Convert model depth -> press; convert model Theta -> T in situ
+!    ===============================================================
+!    * Modeled temperature tracer is "potential temperature"
+!    * Modeled vertical grid is in meters
+
+!    BUT carbonate chem routines require pressure & in-situ T
+!    Thus before computing chemistry, if appropriate,
+!    convert these 2 model vars (input to this routine)
+!     - depth [m] => convert to pressure [db]
+!     - potential temperature (C) => convert to in-situ T (C)
+!    -------------------------------------------------------
+!    1)  Compute pressure [db] from depth [m] and latitude [degrees] (if input is m, for models)
+     IF (trim(optP) == 'm' ) THEN
+!       Compute pressure [db] from depth [m] and latitude [degrees]
+        p = p80(depth(i), lat(i))
+     ELSEIF (trim(optP) == 'db' ) THEN
+!       In this case (where optP = 'db'), p is input & output (no depth->pressure conversion needed)
+        p = depth(i)
+     ELSE
+        PRINT *,"optP must be 'm' or 'db'"
+        STOP
+     ENDIF
+
+!    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
+     IF (trim(optT) == 'Tpot' &
+          .AND. tempot(i) > -3. .AND. tempot(i) < 100.) THEN
+!       This is the case for most models and some data
+!       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
+!       (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
+        tempot68 = (tempot(i) - 0.0002) / 0.99975
+!       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
+        tempis68 = sw_temp(sal(i), tempot68, p, 0.)
+!       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
+        tempis = 0.99975*tempis68 + 0.0002
+!       Note: parts (a) and (c) above are tiny corrections;
+!             part  (b) is a big correction for deep waters (but zero at surface)
+     ELSEIF (trim(optT) == 'Tinsitu') THEN
+!       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
+        tempis = tempot(i)
+     ELSE
+        PRINT *,"optT must be 'Tpot' or 'Tinsitu'"
+        STOP
+     ENDIF
+
+!    Compute constants
+     IF (tempot(i) >= -2. .AND. tempot(i) < 1.0e+2) THEN
+!       Test to indicate if any of input variables are unreasonable
+        IF (      sal(i) < 0.  .OR.  sal(i) > 1e+3) THEN
+           PRINT *, 'i, icount, tempot(i), sal(i) =', &
+                i, icount, tempot(i), sal(i)
+        ENDIF
+!       Zero out negative salinity (prev case for OCMIP2 model w/ slightly negative S in some coastal cells)
+        IF (sal(i) < 0.0) THEN
+           ssal = 0.0
+        ELSE
+           ssal = sal(i)
+        ENDIF
+
+!       Compute absolute temperature (Kelvin) and related values
+        t = DBLE(tempis)
+        tk = 273.15d0 + t
+        invtk=1.0d0/tk
+        dlogtk=LOG(tk)
+
+!       Set pressure effect (prb is in bars)
+        prb = DBLE(p) / 10.0d0
+
+!       Salinity and simply related values
+        s = DBLE(ssal)
+        s2=s*s
+        sqrts=SQRT(s)
+        s15=s**1.5d0
+        scl=s/1.80655d0
+
+!       Ionic strength:
+        is = 19.924d0*s/(1000.0d0 - 1.005d0*s)
+        is2 = is*is
+        sqrtis = SQRT(is)
+
+!       Total concentrations for sulfate, fluoride, and boron
+
+!       Sulfate: Morris & Riley (1966)
+        St(i) = 0.14d0 * scl/96.062d0
+
+!       Fluoride:  Riley (1965)
+        Ft(i) = 0.000067d0 * scl/18.9984d0
+
+!       Boron:
+        IF (trim(optB) == 'l10') THEN
+!          New formulation from Lee et al (2010)
+           Bt(i) = 0.0002414d0 * scl/10.811d0
+        ELSEIF (trim(optB) == 'u74') THEN
+!          Classic formulation from Uppström (1974)
+           Bt(i) = 0.000232d0  * scl/10.811d0
+        ELSE
+           PRINT *,"optB must be 'l10' or 'u74'"
+           STOP
+        ENDIF
+
+!       K0 (K Henry)
+!       CO2(g) <-> CO2(aq.)
+!       K0  = [CO2]/ fCO2
+!       Weiss (1974)   [mol/kg/atm]
+        tmp = 9345.17d0*invtk - 60.2409d0 + 23.3585d0 * LOG(tk/100.0d0)
+        nK0we74 = tmp + s*(0.023517d0 - 0.00023656d0*tk + 0.0047036e-4_r8*tk*tk)
+        K0(i) = EXP(nK0we74)
+
+!       K1 = [H][HCO3]/[H2CO3]
+!       K2 = [H][CO3]/[HCO3]
+        IF (trim(optK1K2) == 'l') THEN
+!         Mehrbach et al. (1973) refit, by Lueker et al. (2000) (total pH scale)
+          K1(i) = 10.0d0**(-1.0d0*(3633.86d0*invtk - 61.2172d0 + 9.6777d0*dlogtk  &
+                  - 0.011555d0*s + 0.0001152d0*s2))
+
+          K2(i) = 10.0d0**(-1*(471.78d0*invtk + 25.9290d0 - 3.16967d0*dlogtk      &
+                  - 0.01781d0*s + 0.0001122d0*s2))
+        ELSEIF (trim(optK1K2) == 'm10') THEN
+!         Millero (2010, Mar. Fresh Wat. Res.) (total pH scale)
+!         pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
+!         ma1 = 13.4051d0*sqrts + 0.03185d0*s - (5.218e-5)*s2
+!         mb1 = -531.095d0*sqrts - 5.7789d0*s
+!         mc1 = -2.0663d0*sqrts
+!         pK1 = pK1o + ma1 + mb1*invtk + mc1*dlogtk
+!         K1(i) = 10.0d0**(-pK1) 
+
+!         pK2o = 5143.692d0*invtk + 14.613358d0*dlogtk -90.18333d0
+!         ma2 = 21.5724d0*sqrts + 0.1212d0*s - (3.714e-4)*s2
+!         mb2 = -798.292d0*sqrts - 18.951d0*s
+!         mc2 = -3.403d0*sqrts
+!         pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
+!         K2(i) = 10.0d0**(-pK2)
+
+!         Millero (2010, Mar. Fresh Wat. Res.) (seawater pH scale)
+          pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
+          ma1 = 13.4038d0*sqrts + 0.03206d0*s - (5.242e-5)*s2
+          mb1 = -530.659d0*sqrts - 5.8210d0*s
+          mc1 = -2.0664d0*sqrts
+          pK1 = pK1o + ma1 + mb1*invtk + mc1*dlogtk
+          K1(i) = 10.0d0**(-pK1) 
+
+          pK2o = 5143.692d0*invtk + 14.613358d0*dlogtk -90.18333d0
+          ma2 = 21.3728d0*sqrts + 0.1218d0*s - (3.688e-4)*s2
+          mb2 = -788.289d0*sqrts - 19.189d0*s
+          mc2 = -3.374d0*sqrts
+          pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
+          K2(i) = 10.0d0**(-pK2)
+        ELSE
+           PRINT *, "optK1K2 must be either 'l' or 'm10'"
+           STOP
+        ENDIF
+
+!       Kb = [H][BO2]/[HBO2]
+!       (total scale)
+!       Millero p.669 (1995) using data from Dickson (1990)
+        Kb(i) = EXP((-8966.90d0 - 2890.53d0*sqrts - 77.942d0*s +  &
+                1.728d0*s15 - 0.0996d0*s2)*invtk +              &
+                (148.0248d0 + 137.1942d0*sqrts + 1.62142d0*s) +   &
+                (-24.4344d0 - 25.085d0*sqrts - 0.2474d0*s) *      &
+                dlogtk + 0.053105d0*sqrts*tk)
+
+!       K1p = [H][H2PO4]/[H3PO4]
+!       (seawater scale)
+!       DOE(1994) eq 7.2.20 with footnote using data from Millero (1974)
+!       Millero (1995), p.670, eq. 65
+!       Use Millero equation's 115.540 constant instead of 115.525 (Dickson et al., 2007).
+!       The latter is only an crude approximation to convert to Total scale (by subtracting 0.015)
+!       And we want to stay on the SWS scale anyway for the pressure correction later.
+        K1p(i) = EXP(-4576.752d0*invtk + 115.540d0 - 18.453d0*dlogtk +  &
+                 (-106.736d0*invtk + 0.69171d0) * sqrts +             &
+                 (-0.65643d0*invtk - 0.01844d0) * s)
+
+!       K2p = [H][HPO4]/[H2PO4]
+!       (seawater scale)
+!       DOE(1994) eq 7.2.23 with footnote using data from Millero (1974))
+!       Millero (1995), p.670, eq. 66
+!       Use Millero equation's 172.1033 constant instead of 172.0833 (Dickson et al., 2007).
+!       The latter is only an crude approximation to convert to Total scale (by subtracting 0.015)
+!       And we want to stay on the SWS scale anyway for the pressure correction later.
+        K2p(i) = EXP(-8814.715d0*invtk + 172.1033d0 - 27.927d0*dlogtk +  &
+                 (-160.340d0*invtk + 1.3566d0)*sqrts +                 &
+                 (0.37335d0*invtk - 0.05778d0)*s)
+
+!       K3p = [H][PO4]/[HPO4]
+!       (seawater scale)
+!       DOE(1994) eq 7.2.26 with footnote using data from Millero (1974)
+!       Millero (1995), p.670, eq. 67
+!       Use Millero equation's 18.126 constant instead of 18.141 (Dickson et al., 2007).
+!       The latter is only an crude approximation to convert to Total scale (by subtracting 0.015)
+!       And we want to stay on the SWS scale anyway for the pressure correction later.
+        K3p(i) = EXP(-3070.75d0*invtk - 18.126d0 +            &
+                 (17.27039d0*invtk + 2.81197d0) *             &
+                 sqrts + (-44.99486d0*invtk - 0.09984d0) * s)
+
+!       Ksi = [H][SiO(OH)3]/[Si(OH)4]
+!       (seawater scale)
+!       Millero (1995), p.671, eq. 72
+!       Use Millero equation's 117.400 constant instead of 117.385 (Dickson et al., 2007).
+!       The latter is only an crude approximation to convert to Total scale (by subtracting 0.015)
+!       And we want to stay on the SWS scale anyway for the pressure correction later.
+        Ksi(i) = EXP(-8904.2d0*invtk  + 117.400d0 - 19.334d0*dlogtk +  &
+                 (-458.79d0*invtk + 3.5913d0) * sqrtis +             &
+                 (188.74d0*invtk - 1.5998d0) * is +                  &
+                 (-12.1652d0*invtk + 0.07871d0) * is2 +              &
+                 LOG(1.0 - 0.001005d0*s))
+
+!       Kw = [H][OH]
+!       (seawater scale)
+!       Millero (1995) p.670, eq. 63 from composite data
+!       Use Millero equation's 148.9802 constant instead of 148.9652 (Dickson et al., 2007).
+!       The latter is only an crude approximation to convert to Total scale (by subtracting 0.015)
+!       And we want to stay on the SWS scale anyway for the pressure correction later.
+        Kw(i) = EXP(-13847.26d0*invtk + 148.9802d0 - 23.6521d0*dlogtk +  &
+               (118.67d0*invtk - 5.977d0 + 1.0495d0 * dlogtk) *          &
+               sqrts - 0.01615d0 * s)
+
+!       Ks = [H][SO4]/[HSO4]
+!       (free scale)
+!       Dickson (1990, J. chem. Thermodynamics 22, 113)
+        Ks_0p = EXP(-4276.1d0*invtk + 141.328d0 - 23.093d0*dlogtk          &
+                + (-13856.d0*invtk + 324.57d0 - 47.986d0*dlogtk) * sqrtis  &
+                + (35474.d0*invtk - 771.54 + 114.723d0*dlogtk) * is      &
+                - 2698.d0*invtk*is**1.5 + 1776.d0*invtk*is2              &
+                + LOG(1.0d0 - 0.001005d0*s))
+
+!       Kf = [H][F]/[HF]
+!       (total scale)
+        IF (trim(optKf) == 'dg') THEN
+!          Dickson and Riley (1979) -- change pH scale to total (following Dickson & Goyet, 1994)
+           Kf_0p = EXP(1590.2d0*invtk - 12.641d0 + 1.525d0*sqrtis +  &
+                   LOG(1.0d0 - 0.001005d0*s) +                     &
+                   LOG(1.0d0 + St(i)/Ks_0p))
+        ELSEIF (trim(optKf) == 'pf') THEN
+!          Perez and Fraga (1987) - Already on Total scale (no need for last line above)
+!          Formulation as given in Dickson et al. (2007)
+           Kf_0p = EXP(874.d0*invtk - 9.68d0 + 0.111d0*sqrts)
+        ELSE
+           PRINT *, "optKf must be either 'dg' or 'pf'"
+           STOP
+        ENDIF
+
+!       Kspc (calcite) - apparent solubility product of calcite
+!       (no scale)
+!       Kspc = [Ca2+] [CO32-] when soln is in equilibrium w/ calcite
+!       Mucci 1983 mol/kg-soln
+        Kspc(i) = 10d0**(-171.9065d0 - 0.077993d0*tk + 2839.319d0/tk    &
+                 + 71.595d0*LOG10(tk)                             &
+                 + (-0.77712d0 + 0.0028426d0*tk + 178.34d0/tk)*sqrts  &
+                 -0.07711d0*s + 0.0041249d0*s15 )
+
+!       Kspa (aragonite) - apparent solubility product of aragonite
+!       (no scale)
+!       Kspa = [Ca2+] [CO32-] when soln is in equilibrium w/ aragonite
+!       Mucci 1983 mol/kg-soln
+        Kspa(i) = 10.d0**(-171.945d0 - 0.077993d0*tk + 2903.293d0/tk &
+             +71.595d0*LOG10(tk) &
+             +(-0.068393d0 + 0.0017276d0*tk + 88.135d0/tk)*sqrts &
+             -0.10018d0*s + 0.0059415d0*s15 )
+
+!       Pressure effect on K's (based on Millero, (1995)
+!           index: K1(1), K2(2), Kb(3), Kw(4), Ks(5), Kf(6), Kspc(7), Kspa(8),
+!                  K1p(9), K2p(10), K3p(11), Ksi(12)
+        DO ipc = 1, 12
+           deltav(ipc)  =  a0(ipc) + a1(ipc) *t + a2(ipc) *t*t
+           deltak(ipc)   = (b0(ipc)  + b1(ipc) *t + b2(ipc) *t*t)
+           lnkpok0(ipc)  = (-(deltav(ipc)) &
+                +(0.5d0*deltak(ipc) * prb) &
+                )                         * prb/(R*tk)
+        END DO
+
+!       Pressure correction on Ks (Free scale)
+        Ks(i) = Ks_0p*EXP(lnkpok0(5))
+!       Conversion factor total -> free scale
+        total2free     = 1.d0/(1.d0 + St(i)/Ks(i))   ! Kfree = Ktotal*total2free
+!       Conversion factor total -> free scale at pressure zero
+        total2free_0p  = 1.d0/(1.d0 + St(i)/Ks_0p)   ! Kfree = Ktotal*total2free
+
+!       Pressure correction on Kf
+!       Kf must be on FREE scale before correction
+        Kf_0p = Kf_0p * total2free_0p   !Convert from Total to Free scale (pressure 0)
+        Kf(i) = Kf_0p * EXP(lnkpok0(6)) !Pressure correction (on Free scale)
+        Kf(i) = Kf(i)/total2free        !Convert back from Free to Total scale
+
+!       Convert between seawater and total scales (as in seacarb)
+        free2SWS  = 1.d0 + St(i)/Ks(i) + Ft(i)/(Kf(i)*total2free)  ! using Kf on free scale
+        total2SWS = total2free * free2SWS                          ! KSWS = Ktotal*total2SWS
+        SWS2total = 1.d0 / total2SWS
+!       Conversion at pressure zero
+        free2SWS_0p  = 1.d0 + St(i)/Ks_0p + Ft(i)/(Kf_0p)  ! using Kf on free scale
+        total2SWS_0p = total2free_0p * free2SWS_0p         ! KSWS = Ktotal*total2SWS
+
+!       Convert from Total to Seawater scale before pressure correction
+!       Must change to SEAWATER scale: K1, K2, Kb
+        IF (trim(optK1K2) == 'l') THEN
+          K1(i)  = K1(i)*total2SWS_0p
+          K2(i)  = K2(i)*total2SWS_0p
+          !This conversion is unnecessary for the K1,K2 from Millero (2010),
+          !since we use here the formulation already on the seawater scale
+        ENDIF
+        Kb(i)  = Kb(i)*total2SWS_0p
+
+!       Already on SEAWATER scale: K1p, K2p, K3p, Kb, Ksi, Kw
+!       K1p(i) = K1p(i)*total2SWS_0p 
+!       K2p(i) = K2p(i)*total2SWS_0p
+!       K3p(i) = K3p(i)*total2SWS_0p
+!       Ksi(i) = Ksi(i)*total2SWS_0p
+!       Kw(i)  = Kw(i)*total2SWS_0p
+
+!       Keep other contants on same scale:
+!          - Ks (already on Free scale)
+!          - Kspc, Kspa (no scale)
+
+!       Perform actual pressure correction (on seawater scale)
+        K1(i)   = K1(i)*EXP(lnkpok0(1))
+        K2(i)   = K2(i)*EXP(lnkpok0(2))
+        Kb(i)   = Kb(i)*EXP(lnkpok0(3))
+        Kw(i)   = Kw(i)*EXP(lnkpok0(4))
+        Kspc(i) = Kspc(i)*EXP(lnkpok0(7))
+        Kspa(i) = Kspa(i)*EXP(lnkpok0(8))
+        K1p(i)  = K1p(i)*EXP(lnkpok0(9))
+        K2p(i)  = K2p(i)*EXP(lnkpok0(10))
+        K3p(i)  = K3p(i)*EXP(lnkpok0(11))
+        Ksi(i)  = Ksi(i)*EXP(lnkpok0(12))
+
+!       Convert back to original total scale:
+        K1(i)  = K1(i)*SWS2total
+        K2(i)  = K2(i)*SWS2total
+        K1p(i) = K1p(i)*SWS2total
+        K2p(i) = K2p(i)*SWS2total
+        K3p(i) = K3p(i)*SWS2total
+        Kb(i)  = Kb(i)*SWS2total
+        Ksi(i) = Ksi(i)*SWS2total
+        Kw(i)  = Kw(i)*SWS2total
+
+     ELSE
+
+        K0(i)   = 1.e20_r8
+        K1(i)   = 1.e20_r8
+        K2(i)   = 1.e20_r8
+        Kb(i)   = 1.e20_r8
+        Kw(i)   = 1.e20_r8
+        Ks(i)   = 1.e20_r8
+        Kf(i)   = 1.e20_r8
+        Kspc(i) = 1.e20_r8
+        Kspa(i) = 1.e20_r8
+        K1p(i)  = 1.e20_r8
+        K2p(i)  = 1.e20_r8
+        K3p(i)  = 1.e20_r8
+        Ksi(i)  = 1.e20_r8
+        Bt(i)   = 1.e20_r8
+        Ft(i)   = 1.e20_r8
+        St(i)   = 1.e20_r8
+
+     ENDIF
+
+  END DO
+
+  RETURN
+END SUBROUTINE constants
+END MODULE mconstants
