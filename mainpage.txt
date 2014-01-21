@@ -1,0 +1,383 @@
+/*! \mainpage Routines to model the ocean carbonate system (mocsy v1.0)
+
+Details of individual routines are available under the "Modules" tab
+above, while the overall description, implementation and use of
+<em>mocsy</em> is described below.
+
+- \subpage synopsis 
+- \subpage authors
+- \subpage bkg 
+- \subpage fort
+- \subpage pyth
+- \subpage refs
+*/
+
+//-----------------------------------------------------------
+
+/*! \page synopsis Synopsis
+
+<em>mocsy</em> is a Fortran 95 package designed to compute all
+carbonate system variables from DIC and total Alk, particularly from
+models.  It updates previous OCMIP code, avoids 3 common model
+approximations, and offers the best-practice constants as well as more
+recent options. It agrees with CO2SYS within 0.005%.
+
+*/
+
+//-----------------------------------------------------------
+
+/*! \page authors Authors
+
+<em>James Orr</em>, LSCE/IPSL, CEA-CNRS-UVSQ, Gif-sur-Yvette, France
+
+<em>Jean-Marie Epitalon</em>, Geoscientific Programming Services, Toulouse, France
+
+*/
+
+//-----------------------------------------------------------
+
+/*! \page bkg Overview
+
+The <em>mocsy</em> package is designed to accurately and efficiently
+compute all carbonate system variables given input for dissolved
+inorganic carbon (DIC), total alkalinity (Alk), temperature, salinity,
+phosphate, and silica concentrations. By default, the thermodynamic
+equilibrium constants used in <em>mocsy</em> are those recommended by
+the Best-Practices Guide (Dickson et al., 2007). <em>mocsy</em> also
+includes options to use more recent formulations for the constants
+\f$K_1\f$ and \f$K_2\f$ from (Millero, 2010) and for total boron
+concentration as a function of salinity (Lee et al., 2010).
+
+<em>mocsy</em> is designed for users with programming experience,
+preferably in either Fortran or python; others may well prefer the
+facility of packages such as ODV or the Excel version of CO2sys.
+However, <em>mocsy</em>'s greater computational speed (Orr et al.,
+2014) makes it well suited for working with large data sets and ocean
+models. Furthermore, <em>mocsy</em> replaces 3 typical model
+approximations with exact formulations to improve model accuracy.
+Whereas the equations describing carbonate system thermodynamics
+require input of pressure, in situ temperature, and concentrations in
+mol/kg, modelers have used more accessible quantities: depth,
+potential temperature, and concentrations in mol/m3 converted to mol/kg
+with a constant density.  <em>mocsy</em> avoids these approximations
+by calculating the 3 exact quantities from other input
+variables. These approximations lead to significant errors in computed
+variables in the deep ocean (Orr and Epitalon, 2014).
+
+With input from 3-D gridded data products, namely GLODAP's DIC and Alk
+(Key et al., 2004) and World Ocean Atlas (2009) fields for T, S, and
+nutrients (Antonov et al., 2010; Loocarnini et al., 2010; Garcia et
+al., 2010), output from <em>mocsy</em> matches that from CO2sys,
+generally within 0.005% (Orr and Epitalon, 2014). Disagreement is
+slightly larger only for computed \f$\Omega_C\f$ (up to 0.07%),
+\f$\Omega_A\f$ (up to 0.13%), and the Revelle factor <em>R</em> (up to
+0.7% in surface waters). The latter stems from the numerical approach
+implemented in CO2sys for <em>R</em> versus the analytical approach
+(Frankignoulle, 1994) adopted in <em>mocsy</em>.
+
+*/
+
+//-----------------------------------------------------------
+
+/*! \page fort The <em>mocsy</em> Fortran code
+
+The fortran code for <em>mocsy</em> is available as a series of
+Fortran 90 routines: vars.f90, constants.f90, depth2press.f90,
+p80.f90, rho.f90, rhoinsitu.f90, sw_adtg.f90, sw_ptmp.f90,
+sw_temp.f90, test_mocsy.f90, tis.f90, and tpot.f90. Most users will
+simply call vars.f90, which calls other routines.
+
+Extensive documentation and the code listing for each of these
+routines is accessible by clicking on their links above.
+
+\section download Download it
+
+To download the mocsy package, simply issue the following command or
+go through git ...
+
+\section compile Compile it
+
+Once the download is complete, compile the code in the normal fashion
+by issuing the following command:
+
+\verbatim
+$ make
+\endverbatim
+
+If successful, you will have just produced an executable
+<em>test_mocsy</em>. Otherwise, if the gfortran (alias f95) compiler
+is not installed on your system, install it or try another one that is
+already installed.  So far, <em>mocsy</em> has been tested and run
+successfully with two compilers: gfortran and ifort.  To change the
+compiler name, edit the <em>makefile</em> and change "f95" to your
+Fortran 90 compiler command.  Then issue the following 2 commands:
+
+\verbatim
+$ make clean
+$ make
+\endverbatim
+
+\section run Run it
+To run the test program, simply execute it as 
+
+\verbatim
+$ ./test_mocsy
+\endverbatim
+
+\section output Output
+If successful, 2 tables will be printed to your screen, as below:
+
+\verbatim
+Table 1: Typical MODEL output
+---------------------------------------------------------------------------------------------------------
+                                                                               in situ         in situ
+  pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature
+(total) (uatm) (uatm)  (mol/m3)    (mol/m3)    (mol/m3)                        (kg/m3) (db)      (C)
+---------------------------------------------------------------------------------------------------------
+ 8.0587  374.2  372.6  0.2230E-01  0.2080E+01  0.1057E+00   1.55   2.46  14.53 1027.97    0.0   2.000
+ 8.0165  367.9  366.3  0.2197E-01  0.2083E+01  0.1033E+00   1.24   1.94  14.58 1032.68 1012.2   2.062
+ 7.9738  362.5  360.9  0.2168E-01  0.2085E+01  0.1011E+00   1.00   1.54  14.63 1037.30 2029.1   2.142
+ 7.9306  358.0  356.4  0.2143E-01  0.2088E+01  0.9886E-01   0.80   1.23  14.68 1041.83 3050.6   2.240
+ 7.8870  354.3  352.8  0.2121E-01  0.2090E+01  0.9672E-01   0.65   0.99  14.72 1046.28 4076.9   2.354
+ 7.8430  351.4  349.9  0.2102E-01  0.2092E+01  0.9466E-01   0.53   0.80  14.76 1050.65 5108.0   2.483
+---------------------------------------------------------------------------------------------------------
+\endverbatim
+
+
+\verbatim
+Table 2: Typical DATA output
+---------------------------------------------------------------------------------------------------------
+                                                                               in situ         in situ
+t  pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature
+(total) (uatm) (uatm)  (mol/kg)    (mol/kg)     (mol/kg)                       (kg/m3) (db)      (C)
+---------------------------------------------------------------------------------------------------------
+ 8.0591  374.9  373.3  0.2174E-04  0.2029E-02  0.1032E-03   1.55   2.47  14.53 1028.11    0.0   2.000
+ 8.0191  368.7  367.1  0.2137E-04  0.2032E-02  0.1011E-03   1.25   1.97  14.59 1032.82 1000.0   2.000
+ 7.9790  363.0  361.5  0.2105E-04  0.2034E-02  0.9901E-04   1.02   1.58  14.66 1037.43 2000.0   2.000
+ 7.9389  357.9  356.4  0.2075E-04  0.2036E-02  0.9700E-04   0.83   1.27  14.71 1041.94 3000.0   2.000
+ 7.8987  353.3  351.8  0.2048E-04  0.2038E-02  0.9505E-04   0.68   1.03  14.77 1046.36 4000.0   2.000
+ 7.8586  349.2  347.8  0.2025E-04  0.2041E-02  0.9317E-04   0.56   0.83  14.82 1050.68 5000.0   2.000
+---------------------------------------------------------------------------------------------------------
+*Table 2 differs slightly from Table 1 because input DIC, Alk, pressure, and temperature differ.
+*Concentration units differ between Tables 1 and 2 because input options differ
+\endverbatim
+
+Comparison of the 2 tables reveal in part differences due to avoiding
+the 3 approximations that are commonly used in model calculations of
+the ocean carbonate system. For details on the specific options, see
+the program <em>test_mocsy.f90</em> as well as the documentation of
+routines under the "Modules" tab.
+
+\section args Calling the main routine
+
+In a standard Fortran 95 program, <em>mocsy</em>'s routine that
+computes all carbonate system variables by calling the <em>vars</em>
+routine
+
+\verbatim
+call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,    &  ! OUTPUT
+          tempot, sal, alk, dic, sil, phos, depth, lat, N,                            &  ! INPUT
+          optRHO='mol/m3', optT='Tpot', optP='m', optB='u74', optK1K2='l', optKf='dg' )  ! INPUT OPTIONS
+\endverbatim
+
+where arguments on the 1st line are output variables, those on the 2nd
+line are input variables, and those on the 3rd line are input
+options. Extensive documentation on the arguments, units, and options, 
+is accessible by clicking on the "Modules" tab and then on
+"mvars" (the module that contains the <em>vars</em> routine). The
+options above would be the common choice for typical ocean models (see
+also <em>test_mocsy.f90</em> for typical options used with
+observations.
+
+Other <em>mocsy</em> routines are available 
+to output the entire set of equilibrium constants (constants.f90), 
+to convert between potential in in-situ temperature (tpot.f90 and tis.f90) , 
+to convert betxeen depth and pressure (depth2press.f90), and 
+to compute in situ density (rhoinsitu.f90).
+
+The <em>mocsy</em> Fortran 95 routines can also be called from
+<em>python</em> as described in the next section.
+
+*/
+
+//-----------------------------------------------------------
+
+/*! \page pyth Using <em>mocsy</em> in python
+This page is for users that want to access the vast capabilities of python, e.g. reading & writing netCDF files easily.
+
+The mocsy package, written in Fortran, is also designed to be called
+within a python script. Using mocsy from within python offers a simple
+and more flexible interface to handle input and output files and to
+integrate with other packages.  For example, the python interface
+makes it easy to read and write netCDF files as well as to interface
+with R using <em>rpy2</em>.  
+
+\section shareobj Make it useable
+
+The first step, before importing mocsy in python, is to make a shared
+object module <em>mocsy.so</em> using the utility <em>f2py</em>.  For
+this fortran-to-python lilbrary converter is part of the python's
+widely used NumPy library. Secondly, you will need a Fortran 95
+compiler (e.g., GNU's gfortran).  With both <em>NumPy</em> and
+gfortran installed, just go to the directory where you downloaded the
+mocsy routines, and type
+
+\verbatim 
+make python
+\endverbatim 
+
+If successful, output from that command will end in "Removing build
+directory ..." and the new file <em>mocsy.so</em> will have been
+produced.  If unsuccesful, test to see that you have gfortran
+installed by typing
+
+\verbatim
+f2py -c --help-fcompiler
+\endverbatim 
+
+If <em>--fcompiler=gnu95</em> does not show up just under the line
+"Fortram compilers found:", then try again to reinstall it.
+Otherwise, if you already have another Fortran 95 compiler installed,
+try to edit the <em>makefile</em> and change the name of the
+FC and F90 variables, accordingly. In addition, change the
+corresponding part of the last line <em>--fcompiler=gnu95</em> to the
+name of your compiler, as listed under the "Fortran compilers found:"
+line from the above command.
+
+\section import Import it
+
+After a successful build, the shared-object file <em>mocsy.so</em>
+will be found in the local directory. It is then imported into a
+python script like any other python library with
+
+\verbatim
+import mocsy
+\endverbatim
+
+\section pydoc Documentation in python
+
+Once <em>mocsy</em> is imported, you can see the basic routines that
+are available, with the standard python library documentation command:
+
+\verbatim
+print mocsy.__doc__
+\endverbatim
+
+For details about the arguments of each routine, just add the name of
+the "module", e.g.,
+
+\verbatim
+print mocsy.mvars.__doc__
+\endverbatim
+
+One could in addition add the name of the "routine", e.g.,
+
+\verbatim
+print mocsy.mvars.vars__doc__
+\endverbatim
+
+but that is unnecessary because the documentation is identical (there
+is but 1 routine per module).  More extensive documentation (on
+arguments, units, options, etc.) is available in this manual by
+clicking on the Modules tab and then the name of the module. The
+routines in python have the same names as in Fortran. The module names
+are the routine names preceded by a "m".
+
+\section use Use it
+
+As an example, here is the call in python of the main routine <em>vars</em> 
+
+\verbatim
+    pH, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, DENis, p, Tis = (
+    mocsy.mvars (t, s, alk, dic, sio2, po4, depth, lat, optrho='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
+    )
+\endverbatim
+
+Input variables and options are on the right side of the equal sign,
+whereas output variables are on the left. All input and output
+arguments must be 1-D vectors (not multidimensional arrays); the
+conversion, both ways, is illustrated in the script
+<em>mocsy_GLODAP.py</em> as are other finer points for using
+<em>mocsy</em> in python. For instance, that script also uses the
+python library <em>cdms</em> to read input files (for DIC, ALk, T, S,
+\f$\hbox{PO}_4^{-3}\f$, and \f$\hbox{SiO}_2\f$) and write the output
+files, all in netCDF format. Moreover, to save disk space for the
+user, input files are read remotely, using OpenDAP. This script is
+executed with the following command:
+
+\verbatim
+python mocsy_GLODAP.py
+\endverbatim
+
+Other subroutines needed by <em>mocsy.mvars</em> are also available to
+the user.  For example, to get the equilibrium constants that were
+used in the above call to <em>mocsy.mvars</em>, the command is
+
+\verbatim
+    Kh, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi, St, Ft, Bt = mocsy.mconstants (t, s, depth, lat, optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
+\endverbatim
+
+And four other routines are available to compute pressure, in-situ density, potential temperature, and in-situ temperature:
+
+\verbatim
+# Compute pressure (db) from depth (m) and latitude (degrees north) following Saunders (1981)
+pfd = mocsy.mdepth2press(depth,lat)   
+
+# Compute in situ density (kg/m3) from salinity (psu), in-situ temp (C), and pressure (db)
+rhois = mocsy.mrhoinsitu(s, t, pfd)  
+
+# Compute potential temperature (C) from salinity (psu), in situ temperature (C), and pressure (db)
+Tpot = mocsy.mtpot(s, Tis, pfd, 0)     
+
+# Compute in situ temperature (C) from salinity (psu), potential temperature (C), and pressure (db)
+Tis = mocsy.mtis(s, Tpot, pfd, 0)     
+\endverbatim
+
+*/
+
+//-----------------------------------------------------------
+
+/*! \page refs References
+
+Antonov, J. I., Seidov, D., Boyer, T. P., Locarnini, R. A., Mishonov,
+A. V., Garcia, H. E., Baranova, O. K., Zweng, M. M., and Johnson,
+D. R.: World Ocean Atlas 2009, Volume 2: Salinity, S.  Levitus, ed.,
+Atlas NESDIS 69, NOAA, U.S. Government Printing Office, Washington,
+D.C., 184 pp., 2010.
+
+Dickson, A. G., Sabine, C. L., and Christian, J. R.: Guide to best
+practices for ocean CO2 measurements, PICES Special Publication 3,
+IOCCP Report No. 8, http:// aquaticcommons.org/1443/, 2007.
+
+Frankignoulle, M.: A complete set of buffer factors for acid/base CO2
+system in seawater, <em>J.  Mar. Sys., 5,<em> 111–118, 1994.
+
+Garcia, H. E., Locarnini, R. A., Boyer, T. P., Antonov, J. I., Zweng,
+M. M., Baranova, O. K., and Johnson, D. R.: World Ocean Atlas 2009,
+Volume 4: Nutrients (phosphate, nitrate, silicate), S. Levitus, ed.,
+Atlas NESDIS 71, NOAA, U.S. Government Printing Office,Washington,
+D.C., 398 pp., 2010.
+
+Lee, K., Kim, T.-W., Byrne, R. H., Millero, F. J., Feely, R. a., and
+Liu, Y.- M.: The universal ratio of boron to chlorinity for the North
+Pacific and North Atlantic oceans, <em>Geochimica et Cosmochimica Acta,
+74,<em> 1801--1811, 2010.
+
+Locarnini, R., Mishonov, A., Antonov, J., Boyer, T., Garcia, H.,
+Baranova, O., Zweng, M., and Johnson, D.: World Ocean Atlas 2009,
+Volume 1: Temperature, S. Levitus, ed., Atlas NESDIS 68, NOAA,
+U.S. Government Printing Office, Washington, D.C., 184 pp., 2010.
+
+Millero, F. J.: Carbonate constants for estuarine waters, <em>Marine and
+Freshwater Research</em>, 61, 139--142, 2010.
+
+Orr, J.C., J.-M. Epitalon, and J.-P. Gattuso: Comparison of seven packages 
+that compute ocean carbonate chemistry <em>Biogeosciences</em>, submitted, 2014.
+
+Orr, J.C. and J.-M. Epitalon: Improved routines to model the ocean 
+carbonate system: mocsy 1.0, <em>Geoscientific Model Development,</em> submitted, 2014.
+
+Saunders, P: Practical Conversion of Pressure to Depth,
+<em>J. Phys. Oceanogr.,</em> 11, 573-574, 1981.
+
+*/
