@@ -20,47 +20,97 @@ F90 = gfortran
 
 #DEBUGFLAGS = -g
 #LDFLAGS = -L/usr/local/lib -lnetcdf -lnetcdff
-#INCLUDEFLAGS = -I/usr/local/include
+LDFLAGS = -L/usr/local/lib -lmocsy
+INCLUDEFLAGS = -I/usr/local/include .
+
+# List of executables to be built within the package
+PROGRAMS = libmocsy.a test_mocsy mocsy.so
+
+# "make" builds all
+all: $(PROGRAMS)
 
 #---------------------------------------------------------------------------
-MOCSY = singledouble.f90 \
-       sw_adtg.f90 \
-       sw_ptmp.f90 \
-       sw_temp.f90 \
-       tpot.f90 \
-       tis.f90 \
-       p80.f90 \
-       rho.f90 \
-       rhoinsitu.f90 \
-       depth2press.f90 \
-       constants.f90 \
-       vars.f90 
+SOURCES = singledouble.f90 \
+          sw_adtg.f90 \
+          sw_ptmp.f90 \
+          sw_temp.f90 \
+          tpot.f90 \
+          tis.f90 \
+          p80.f90 \
+          rho.f90 \
+          rhoinsitu.f90 \
+          depth2press.f90 \
+          constants.f90 \
+          vars.f90 
 
-OBJS = $(MOCSY) \
-       test_mocsy.f90 
+OBJS = singledouble.o \
+        sw_adtg.o \
+        sw_ptmp.o \
+        sw_temp.o \
+        tpot.o \
+        tis.o \
+        p80.o \
+        rho.o \
+        rhoinsitu.o \
+        depth2press.o \
+        constants.o \
+        vars.o 
+
+TOBJS = $(OBJS) \
+        test_mocsy.o
 
 EXEC = test_mocsy
+
+library = libmocsy.a
 #---------------------------------------------------------------------------
 
-# use Pattern rules (see gnumake documentation)
-%.o: %.f
-	$(FC) $(FCFLAGS) -c -o $@ $(INCLUDEFLAGS) $*.f
+# General rule for building prog from prog.o; $^ (GNU extension) is
+# used in order to list additional object files on which the
+# executable depends
+#%: %.o
+#	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
 
+# General Pattern rules for building prog.o from prog.f90 or prog.F90; $< is
+# used in order to list only the first prerequisite (the source file)
+# and not the additional prerequisites such as module or include files
 %.o: %.f90
-	$(F90) $(FCFLAGS) -c -o $@ $(INCLUDEFLAGS) $*.f90
+	$(FC) $(FCFLAGS) -c $<
 
 #---------------------------------------------------------------------------
-$(EXEC): $(OBJS) 
-	$(FC) $(FCFLAGS) -o $(EXEC) $(OBJS) $(LDFLAGS) $(INCLUDEFLAGS)
+# Build the mocsy library containing the object files (not used, illustration only)
+$(library):  $(OBJS)
+	ar cr $(library) $(OBJS)
 
-$(EXEC).o: makefile
+# Build the Fortran program executable that tests the mocsy library (test_mocsy)
+$(EXEC): $(TOBJS) $(library)
+	$(FC) $(FCFLAGS) -o $(EXEC) $(TOBJS) 
+
+# Build the shared object file for python
+mocsy.so: 
+	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
 #---------------------------------------------------------------------------
 
-clean:  
-	rm *.mod *.so
-	rm $(EXEC) 
-	#rm $(EXEC) $(EXEC2)
+# General rule for building prog from prog.o; $^ (GNU extension) is
+# used in order to list additional object files on which the
+# executable depends
+%: %.o
+	$(FC) $(FCFLAGS) -o $@ $^ 
 
-python: 
-	f2py -c $(MOCSY) -m mocsy --fcompiler=gnu95 --f90flags=-O3
+# General rules for building prog.o from prog.f90 or prog.F90; $< is
+# used in order to list only the first prerequisite (the source file)
+# and not the additional prerequisites such as module or include files
+%.o: %.f90
+	$(FC) $(FCFLAGS) -c $<
+
+%.o: %.F90
+	$(FC) $(FCFLAGS) -c $<
+
+# Utility targets
+.PHONY: clean veryclean
+
+clean:
+	rm -f *.o *.mod *.so
+
+veryclean: clean
+	rm -f *~ $(PROGRAMS) 
 	

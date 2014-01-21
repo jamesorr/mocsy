@@ -92,8 +92,17 @@ routines is accessible by clicking on their links above.
 
 \section download Download it
 
-To download the mocsy package, simply issue the following command or
+To download the mocsy package, potential users can use gitsimply issue the following command or
 go through git ...
+
+\verbatim
+$ mkdir <em>my_new_directory</em>
+$ git init
+$ git clone git://github.com/jamesorr/mocsy.git
+\endverbatim
+
+or simply go to the main web page on github https://github.com/jamesorr/mocsy and click on the link "Download ZIP".
+
 
 \section compile Compile it
 
