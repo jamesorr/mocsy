@@ -1,7 +1,7 @@
 !> Module with sw_ptmp function - compute potential T from in-situ T
 MODULE msw_ptmp
 CONTAINS
-!> Function to calculate potential temperature [C] from in-situ Temperature
+!> Function to calculate potential temperature [C] from in-situ temperature
 FUNCTION sw_ptmp  (s,t,p,pr)
 
   !     ==================================================================

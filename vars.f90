@@ -1,4 +1,4 @@
-!> Module with vars subroutine - compute carbonate vars from DIC,Alk,T,S,P,nuts
+!> Module with vars subroutine - compute carbonate system vars from DIC,Alk,T,S,P,nuts
 MODULE mvars
 CONTAINS
 !>    Computes standard carbonate system variables (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)

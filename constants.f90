@@ -1,4 +1,5 @@
-!> Module with contants subroutine - computes carbonate system Ks from S,T,P 
+!> Module with contants subroutine - computes carbonate system constants
+!! from S,T,P 
 MODULE mconstants
 CONTAINS
 !> Compute thermodynamic constants
