@@ -16,11 +16,11 @@ above, while the overall description, implementation and use of
 
 /*! \page synopsis Synopsis
 
-<em>mocsy</em> is a Fortran 95 package designed to compute all
+<em>mocsy</em> is a Fortran 95 package designed to compute all ocean
 carbonate system variables from DIC and total Alk, particularly from
 models.  It updates previous OCMIP code, avoids 3 common model
 approximations, and offers the best-practice constants as well as more
-recent options. It agrees with CO2SYS within 0.005%.
+recent options. Its results agree with those from CO2SYS within 0.005%.
 
 */
 
@@ -92,17 +92,19 @@ routines is accessible by clicking on their links above.
 
 \section download Download it
 
-To download the mocsy package, potential users can use gitsimply issue the following command or
-go through git ...
+If <em>git</em> software is installed, the most recent version of the 
+mocsy package can be downloaded using typical git commands:
 
 \verbatim
-$ mkdir <em>my_new_directory</em>
+$ mkdir mydir
+$ cd !$
 $ git init
 $ git clone git://github.com/jamesorr/mocsy.git
 \endverbatim
 
-or simply go to the main web page on github https://github.com/jamesorr/mocsy and click on the link "Download ZIP".
-
+Otherwise, just go to the main web page on github
+https://github.com/jamesorr/mocsy and click on the link "Download
+ZIP".
 
 \section compile Compile it
 
@@ -119,14 +121,14 @@ is not installed on your system, install it or try another one that is
 already installed.  So far, <em>mocsy</em> has been tested and run
 successfully with two compilers: gfortran and ifort.  To change the
 compiler name, edit the <em>makefile</em> and change "f95" to your
-Fortran 90 compiler command.  Then issue the following 2 commands:
+Fortran 95 compiler command.  Then issue the following 2 commands:
 
 \verbatim
 $ make clean
 $ make
 \endverbatim
 
-\section run Run it
+\section run Run test program
 To run the test program, simply execute it as 
 
 \verbatim
