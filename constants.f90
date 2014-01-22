@@ -17,12 +17,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   !     INPUT variables:
   !     ================
-  !     depth   = depth [m]     (with optP=0, i.e., for a z-coordinate model vertical grid is depth, not pressure)
-  !             = pressure [db] (with optP=1)
-  !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP=0)
-  !             = dummy array (unused when optP=1)
-  !     tempot  = potential temperature [degrees C] (with optT=0, i.e., models carry tempot, not temp)
-  !             = in situ   temperature [degrees C] (with optT=1, e.g., for data)
+  !     depth   = depth [m]     (with optP='m', i.e., for a z-coordinate model vertical grid is depth, not pressure)
+  !             = pressure [db] (with optP='db')
+  !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
+  !             = dummy array (unused when optP='db')
+  !     tempot  = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
+  !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
 
   !     optT: choose in situ vs. potential temperature as input
@@ -39,8 +39,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !     optB:
   !     ---------
   !       -> 'u74' means use classic formulation of Uppström (1974) for total Boron
-  !       -> 'l10' means use   new formulation of Lee et al. (2010) for total Boron
-
+  !       -> 'l10' means use newer   formulation of Lee et al. (2010) for total Boron
+  !     ---------
   !     optK1K2:
   !     ---------
   !       -> 'l'   means use Lueker et al. (2000) formulations for K1 & K2 (recommended by Dickson et al. 2007)
@@ -51,7 +51,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !     optKf:
   !     ----------
   !       -> 'pf' means use Perez & Fraga (1987) formulation for Kf (recommended by Dickson et al., 2007)
-  !               **** BUT Valid only for  9 < T < 33°C and 10 < S < 40.
+  !               **** BUT Valid for  9 < T < 33°C and 10 < S < 40.
   !       -> 'dg' means use Dickson & Riley (1979) formulation for Kf (recommended by Dickson & Goyet, 1994)
 
   !     OUTPUT variables:
@@ -190,9 +190,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !    ===============================================================
 !    Convert model depth -> press; convert model Theta -> T in situ
 !    ===============================================================
-!    * Modeled temperature tracer is "potential temperature"
-!    * Modeled vertical grid is in meters
-
+!    * Model temperature tracer is usually "potential temperature"
+!    * Model vertical grid is usually in meters
 !    BUT carbonate chem routines require pressure & in-situ T
 !    Thus before computing chemistry, if appropriate,
 !    convert these 2 model vars (input to this routine)
@@ -246,13 +245,13 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
            ssal = sal(i)
         ENDIF
 
-!       Compute absolute temperature (Kelvin) and related values
+!       Absolute temperature (Kelvin) and related values
         t = DBLE(tempis)
         tk = 273.15d0 + t
         invtk=1.0d0/tk
         dlogtk=LOG(tk)
 
-!       Set pressure effect (prb is in bars)
+!       Pressure effect (prb is in bars)
         prb = DBLE(p) / 10.0d0
 
 !       Salinity and simply related values

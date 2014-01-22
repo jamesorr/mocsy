@@ -123,16 +123,16 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
   CHARACTER(*), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
-  CHARACTER(*), INTENT(in) :: optP
+  CHARACTER(2), INTENT(in) :: optP
   !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-  CHARACTER(*), INTENT(in) :: optB
+  CHARACTER(3), INTENT(in) :: optB
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
-  CHARACTER(*), INTENT(in) :: optKf
+  CHARACTER(2), INTENT(in) :: optKf
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
-  CHARACTER(*), INTENT(in) :: optK1K2
+  CHARACTER(3), INTENT(in) :: optK1K2
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -205,12 +205,13 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !    * Model temperature tracer is usually "potential temperature"
 !    * Model vertical grid is usually in meters
 !    BUT carbonate chem routines require pressure & in-situ T
-!    Thus before computing chemistry,
+!    Thus before computing chemistry, if appropriate,
 !    convert these 2 model vars (input to this routine)
 !    - depth [m] => convert to pressure [db]
 !    - potential temperature (C) => convert to in-situ T (C)
 !    -------------------------------------------------------
 !    1)  Compute pressure [db] from depth [m] and latitude [degrees] (if input is m, for models)
+     !print *,"optP =", optP, "end"
      IF (trim(optP) == 'm' ) THEN
 !       Compute pressure [db] from depth [m] and latitude [degrees]
         p(i) = p80(depth(i), lat(i))
@@ -218,12 +219,12 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !       In this case (where optP = 'db'), p is input & output (no depth->pressure conversion needed)
         p(i) = depth(i)
      ELSE
+        !print *,"optP =", optP, "end"
         PRINT *,"optP must be either 'm' or 'db'"
         STOP
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     print *,'i, tempot(i) =', i, tempot(i)
      IF (trim(optT) == 'Tpot' &
           .AND. tempot(i) > -3. .AND. tempot(i) < 100.) THEN
 !       This is the case for most models and some data
@@ -240,6 +241,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis(i) = tempot(i)
      ELSE
+        print *,'i, tempot(i) =', i, tempot(i)
+        !write(*,*)"optT =", optT, "end"
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         STOP
      ENDIF
@@ -297,7 +300,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         invtk=1.0d0/tk
         dlogtk=LOG(tk)
 
-!       Rressure effect (prb is in bars)
+!       Pressure effect (prb is in bars)
         prb = DBLE(p(i)) / 10.0d0
 
 !       Salinity (equivalent array in double precision)
