@@ -86,7 +86,7 @@ $(EXEC): $(TOBJS) $(library)
 	$(FC) $(FCFLAGS) -o $(EXEC) $(TOBJS) 
 
 # Build the shared object file for python
-mocsy.so: 
+mocsy.so: $(OBJS)
 	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
 #---------------------------------------------------------------------------
 

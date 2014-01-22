@@ -46,7 +46,7 @@ equilibrium constants used in <em>mocsy</em> are those recommended by
 the Best-Practices Guide (Dickson et al., 2007). <em>mocsy</em> also
 includes options to use more recent formulations for the constants
 \f$K_1\f$ and \f$K_2\f$ from (Millero, 2010) and for total boron
-concentration as a function of salinity (Lee et al., 2010).
+concentrations as a function of salinity (Lee et al., 2010).
 
 <em>mocsy</em> is designed for users with programming experience,
 preferably in either Fortran or python; others may well prefer the
@@ -112,7 +112,7 @@ Once the download is complete, compile the code in the normal fashion
 by issuing the following command:
 
 \verbatim
-$ make
+$ make test_mocsy
 \endverbatim
 
 If successful, you will have just produced an executable
@@ -125,7 +125,7 @@ Fortran 95 compiler command.  Then issue the following 2 commands:
 
 \verbatim
 $ make clean
-$ make
+$ make test_mocsy
 \endverbatim
 
 \section run Run test program
@@ -234,7 +234,7 @@ gfortran installed, just go to the directory where you downloaded the
 mocsy routines, and type
 
 \verbatim 
-make python
+make mocsy.so
 \endverbatim 
 
 If successful, output from that command will end in "Removing build
