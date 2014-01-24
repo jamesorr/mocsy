@@ -269,7 +269,7 @@ if __name__ == "__main__":
     print "Compute carbonate chemistry"
     pH, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, DENis, p, Tis = (
     mocsy.mvars (td, sd, alkd, dicd.ravel(), sio2d, po4d, depth, lat,
-               optrho='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
+               optcon='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
     )
     del (td)
     del (sd)
