@@ -92,13 +92,12 @@ routines is accessible by clicking on their links above.
 
 \section download Download it
 
-If <em>git</em> software is installed, the most recent version of the 
-mocsy package can be downloaded using typical git commands:
+If <em>git</em> software is installed, the most recent version of the
+mocsy package can be downloaded using typical git commands. Go to a
+directory under which you want install a new subdirectory <em>mocsy</em>
+containing the code.  Then type
 
 \verbatim
-$ mkdir mydir
-$ cd !$
-$ git init
 $ git clone git://github.com/jamesorr/mocsy.git
 \endverbatim
 
@@ -188,7 +187,7 @@ routine
 \verbatim
 call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,    &  ! OUTPUT
           tempot, sal, alk, dic, sil, phos, depth, lat, N,                            &  ! INPUT
-          optRHO='mol/m3', optT='Tpot', optP='m', optB='u74', optK1K2='l', optKf='dg' )  ! INPUT OPTIONS
+          optCON='mol/m3', optT='Tpot', optP='m', optB='u74', optK1K2='l', optKf='dg' )  ! INPUT OPTIONS
 \endverbatim
 
 where arguments on the 1st line are output variables, those on the 2nd
@@ -300,7 +299,7 @@ As an example, here is the call in python of the main routine <em>vars</em>
 
 \verbatim
     pH, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, DENis, p, Tis = (
-    mocsy.mvars (t, s, alk, dic, sio2, po4, depth, lat, optrho='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
+    mocsy.mvars (t, s, alk, dic, sio2, po4, depth, lat, optcon='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
     )
 \endverbatim
 
@@ -342,6 +341,43 @@ Tpot = mocsy.mtpot(s, Tis, pfd, 0)
 
 # Compute in situ temperature (C) from salinity (psu), potential temperature (C), and pressure (db)
 Tis = mocsy.mtis(s, Tpot, pfd, 0)     
+\endverbatim
+
+\section examples Examples
+
+1) Simple scaler variable:
+
+\verbatim
+$ python
+import mocsy
+pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = mocsy.mvars (tempot=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
+\endverbatim
+
+With the same scalar input for S, T, and P, compute the constants, but
+change to the newer options published since the best-practices guide:
+Lee et al. (2010) for total boron and Millero (2010) for \f$K_1\f$ and
+\f$K_2\f$:
+
+\verbatim
+Kh,K1,K2,Kb,Kw,Ks,Kf,Kspc,Kspa,K1p,K2p,K3p,Ksi,St,Ft,Bt = mocsy.mconstants (tempot=18.,sal=35.,depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg")
+\endverbatim
+
+2) Simple arrays (numpy):
+
+\verbatim
+Under construction: Details to be added later
+\endverbatim
+
+3) Read input from a csv (spreadsheet) file:
+
+\verbatim
+Under construction: Details to be added later
+\endverbatim
+
+4) An example with netCDF files for input and output:
+
+\verbatim
+Under construction: Details to be added later
 \endverbatim
 
 */

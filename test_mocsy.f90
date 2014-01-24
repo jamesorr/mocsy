@@ -15,7 +15,7 @@ PROGRAM test_mocsy
    INTEGER :: N
    REAL(kind=r4), DIMENSION(100) :: tempot, sal, alk, dic, sil, phos, depth, lat
 !  "vars" Input options
-   CHARACTER(10) :: optRHO, optT, optP, optB, optKf, optK1K2
+   CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2
 
 !  Local variables:
    INTEGER :: i
@@ -24,8 +24,8 @@ PROGRAM test_mocsy
    DO i = 1,6
      tempot(i) = 2.0
      sal(i)    = 35.0
-     alk(i)    = 2295.*1.025e-3 !Rough convert of S. Ocean ave surf ALK (umol/kg) to model units (mol/m3)
-     dic(i)    = 2154.*1.025e-3 !Rough convert of S. Ocean ave surf DIC (umol/kg) to model units (mol/m3)
+     alk(i)    = 2295.*1.028e-3 !Rough convert of S. Ocean ave surf ALK (umol/kg) to model units (mol/m3)
+     dic(i)    = 2154.*1.028e-3 !Rough convert of S. Ocean ave surf DIC (umol/kg) to model units (mol/m3)
      sil(i)    = 50.  *1.0e-3   !Convert observed S. Ocean ave surf SiO2 (umol/L) to model units (mol/m3) 
      phos(i)   = 1.8  *1.0e-3   !Convert observed S. Ocean ave surf PO4  (umol/L) to model units (mol/m3)
      lat(i)    = -60.           !Latitude used to convert model depth to pressure (Saunders, 1981, JPO)
@@ -35,7 +35,7 @@ PROGRAM test_mocsy
 
 !> OPTIONS: see complete documentation in 'vars' subroutine
 !> Typical options for MODELS
-   optRHO  = 'mol/m3'   ! input concentrations are in MOL/M3
+   optCON  = 'mol/m3'   ! input concentrations are in MOL/M3
    optT    = 'Tpot'     ! input temperature, variable 'tempot', is POTENTIAL temp [°C]
    optP    = 'm'        ! input variable 'depth' is in METERS
    optB    = 'l10'      ! Lee et al. (2010) formulation for total boron
@@ -46,7 +46,7 @@ PROGRAM test_mocsy
 !> FROM temperature, salinity, total alkalinity, dissolved inorganic carbon, silica, phosphate, depth (or pressure) (1-D arrays)
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &  ! OUTPUT
              tempot, sal, alk, dic, sil, phos, depth, lat, N,                          &  ! INPUT
-             optRHO, optT, optP, optB, optK1K2, optKf)                                    ! INPUT OPTIONS
+             optCON, optT, optP, optB, optK1K2, optKf)                                    ! INPUT OPTIONS
 !  Print out results
    write(*,50)
    write(*,100)
@@ -59,7 +59,7 @@ PROGRAM test_mocsy
 
 !> Repeat the operation, but with options for observations
 !> Typical options for observations
-   optRHO  = 'mol/kg'  ! input concentrations are in MOL/KG
+   optCON  = 'mol/kg'  ! input concentrations are in MOL/KG
    optT    = 'Tinsitu' ! input temperature, variable 'tempot' is actually IN SITU temp [°C]
    optP    = 'db'      ! input variable 'depth' is in 'DECIBARS'
    optB    = 'l10'
@@ -70,15 +70,15 @@ PROGRAM test_mocsy
    DO i = 1,6
      alk(i)    = 2295.*1.e-6      ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
      dic(i)    = 2154.*1.e-6      ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
-     sil(i)    = 50.  /1.025e6    ! Rough convert obs. S. Ocean ave surf SiO2 (umol/L) to mocsy data units (mol/kg) 
-     phos(i)   = 1.8  /1.025e6    ! Rough convert obs. S. Ocean ave surf PO4  (umol/L) to model data units (mol/kg)
+     sil(i)    = 50.  /1.028e6    ! Rough convert obs. S. Ocean ave surf SiO2 (umol/L) to mocsy data units (mol/kg) 
+     phos(i)   = 1.8  /1.028e6    ! Rough convert obs. S. Ocean ave surf PO4  (umol/L) to model data units (mol/kg)
      depth(i) = real(i-1) * 1000. ! Vary depth from 0 to 5000 db by 1000 db
      N = i
    END DO
 
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,         &  ! OUTPUT
              tempot, sal, alk, dic, sil, phos, depth, lat, N,                                 &  ! INPUT
-             optRHO='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2='m10', optKf='dg')  ! INPUT OPTIONS
+             optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2='m10', optKf='dg')  ! INPUT OPTIONS
 !  Print out results (typical for data: concentration units differ)
    write(*,50)
    write(*,200)

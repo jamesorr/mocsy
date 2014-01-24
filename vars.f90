@@ -8,7 +8,7 @@ CONTAINS
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                 tempot, sal, alk, dic, sil, phos, depth, lat, N,                          &
-                optRHO, optT, optP, optB, optK1K2, optKf                                  )
+                optCON, optT, optP, optB, optK1K2, optKf                                  )
 
   !   Purpose:
   !     Computes other standard carbonate system variables (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)
@@ -27,18 +27,18 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !     tempot  = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
-  !     alk     = total alkalinity in [eq/m^3] with optRHO = 'mol/m3'
-  !             =               [eq/kg]  with optRHO = 'mol/kg'
-  !     dic     = dissolved inorganic carbon [mol/m^3] with optRHO = 'mol/m3'
-  !             =                            [mol/kg]  with optRHO = 'mol/kg'
-  !     sil     = silica    [mol/m^3] with optRHO = 'mol/m3'
-  !             =           [mol/kg]  with optRHO = 'mol/kg'
-  !     phos    = phosphate [mol/m^3] with optRHO = 'mol/m3'
-  !             =           [mol/kg]  with optRHO = 'mol/kg'
+  !     alk     = total alkalinity in [eq/m^3] with optCON = 'mol/m3'
+  !             =               [eq/kg]  with optCON = 'mol/kg'
+  !     dic     = dissolved inorganic carbon [mol/m^3] with optCON = 'mol/m3'
+  !             =                            [mol/kg]  with optCON = 'mol/kg'
+  !     sil     = silica    [mol/m^3] with optCON = 'mol/m3'
+  !             =           [mol/kg]  with optCON = 'mol/kg'
+  !     phos    = phosphate [mol/m^3] with optCON = 'mol/m3'
+  !             =           [mol/kg]  with optCON = 'mol/kg'
   !     INPUT options:
   !     ==============
   !     -----------
-  !     optRHO: choose input concentration units - mol/kg (data) vs. mol/m^3 (models)
+  !     optCON: choose input concentration units - mol/kg (data) vs. mol/m^3 (models)
   !     -----------
   !       -> 'mol/kg' for DIC and ALK given on mokal scale, i.e., in mol/kg  (std DATA units)
   !       -> 'mol/m3' for DIC and ALK given in mol/m^3 (std MODEL units)
@@ -103,13 +103,13 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   REAL(kind=r4), INTENT(in),    DIMENSION(N) :: tempot
   !> salinity <b>[psu]</b>
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
-  !> total alkalinity in <b>[eq/m^3]</b> (when optRHO = 'mol/m3') OR in <b>[eq/kg]</b>  (when optRHO = 'mol/kg')
+  !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: alk
-  !> dissolved inorganic carbon in <b>[mol/m^3]</b> (when optRHO = 'mol/m3') OR in <b>[mol/kg]</b> (when optRHO = 'mol/kg')
+  !> dissolved inorganic carbon in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: dic
-  !> SiO2 concentration in <b>[mol/m^3]</b> (when optRHO = 'mol/m3') OR in <b>[mol/kg]</b> (when optRHO = 'mol/kg')
+  !> SiO2 concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: sil
-  !> phosphate concentration in <b>[mol/m^3]</b> (when optRHO = 'mol/m3') OR in <b>[mol/kg]</b> (when optRHO = 'mol/kg')
+  !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: phos
 !f2py optional , depend(sal) :: n=len(sal)
   !> depth in \b meters (when optP='m') or \b decibars (when optP='db')
@@ -119,7 +119,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
-  CHARACTER(*), INTENT(in) :: optRHO
+  CHARACTER(*), INTENT(in) :: optCON
   !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
   CHARACTER(*), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
@@ -141,11 +141,11 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: pco2
   !> CO2 fugacity <b>[uatm]</b>
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: fco2
-  !> aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optRHO
+  !> aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optCON
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: co2
-  !> bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optRHO
+  !> bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: hco3
-  !> carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optRHO
+  !> carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: co3
   !> Omega for aragonite, i.e., the aragonite saturation state
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: OmegaA
@@ -325,16 +325,16 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         rhoSW(i) =  rho(ssal, tempis68, REAL(prb))
 
 !       Either convert units of DIC and ALK (MODEL case) or not (DATA case)
-        IF     (trim(optRHO) == 'mol/kg') THEN
+        IF     (trim(optCON) == 'mol/kg') THEN
 !          No conversion:
 !          print *,'DIC and ALK already given in mol/kg (std DATA units)'
            drho = 1.
-        ELSEIF (trim(optRHO) == 'mol/m3') THEN
+        ELSEIF (trim(optCON) == 'mol/m3') THEN
 !          Do conversion:
 !          print *,"DIC and ALK given in mol/m^3 (std MODEL units)"
            drho = DBLE(rhoSW(i))
         ELSE
-           PRINT *,"optRHO must be either 'mol/kg' or 'mol/m3'"
+           PRINT *,"optCON must be either 'mol/kg' or 'mol/m3'"
            STOP
         ENDIF
 
@@ -382,7 +382,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         cb = K1 * cu / ah1
         cc = K2 * cb / ah1
 
-!       If optRHO = 'mol/m3', then:
+!       If optCON = 'mol/m3', then:
 !       convert output var concentrations from mol/kg to mol/m^3
 !       e.g., for case when drho = 1028, multiply by [1.028 kg/L  x  1000 L/m^3])
         co2(i)  = REAL(cu * drho)
