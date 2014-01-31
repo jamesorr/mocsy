@@ -186,7 +186,7 @@ routine
 
 \verbatim
 call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,    &  ! OUTPUT
-          tempot, sal, alk, dic, sil, phos, depth, lat, N,                            &  ! INPUT
+          temp, sal, alk, dic, sil, phos, depth, lat, N,                              &  ! INPUT
           optCON='mol/m3', optT='Tpot', optP='m', optB='u74', optK1K2='l', optKf='dg' )  ! INPUT OPTIONS
 \endverbatim
 
