@@ -119,9 +119,9 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
-  CHARACTER(*), INTENT(in) :: optCON
+  CHARACTER(6), INTENT(in) :: optCON
   !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
-  CHARACTER(*), INTENT(in) :: optT
+  CHARACTER(7), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
   CHARACTER(2), INTENT(in) :: optP
   !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
