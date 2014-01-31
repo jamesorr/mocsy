@@ -350,7 +350,7 @@ Tis = mocsy.mtis(s, Tpot, pfd, 0)
 \verbatim
 $ python
 import mocsy
-pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = mocsy.mvars (tempot=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
+pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = mocsy.mvars (temp=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
 \endverbatim
 
 With the same scalar input for S, T, and P, compute the constants, but
@@ -359,7 +359,7 @@ Lee et al. (2010) for total boron and Millero (2010) for \f$K_1\f$ and
 \f$K_2\f$:
 
 \verbatim
-Kh,K1,K2,Kb,Kw,Ks,Kf,Kspc,Kspa,K1p,K2p,K3p,Ksi,St,Ft,Bt = mocsy.mconstants (tempot=18.,sal=35.,depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg")
+Kh,K1,K2,Kb,Kw,Ks,Kf,Kspc,Kspa,K1p,K2p,K3p,Ksi,St,Ft,Bt = mocsy.mconstants (temp=18.,sal=35.,depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg")
 \endverbatim
 
 2) Simple arrays (numpy):

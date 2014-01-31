@@ -7,7 +7,7 @@ CONTAINS
 !!    total alkalinity (ALK), dissolved inorganic carbon (DIC),
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
-                tempot, sal, alk, dic, sil, phos, depth, lat, N,                          &
+                temp, sal, alk, dic, sil, phos, depth, lat, N,                          &
                 optCON, optT, optP, optB, optK1K2, optKf                                  )
 
   !   Purpose:
@@ -24,7 +24,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !             = pressure [db] (with optP='db')
   !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
   !             = dummy array (unused when optP='db')
-  !     tempot  = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
+  !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not in situ temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
   !     alk     = total alkalinity in [eq/m^3] with optCON = 'mol/m3'
@@ -100,7 +100,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
-  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: tempot
+  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: temp
   !> salinity <b>[psu]</b>
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
   !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
@@ -161,10 +161,9 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   REAL(kind=r4), INTENT(out), DIMENSION(N) :: tempis
 
 ! Local variables
-! REAL(kind=r4) :: tempot
   REAL(kind=r4) :: ssal, salk, sdic, ssil, sphos
 
-  REAL(kind=r4) :: tempis68, tempot68
+  REAL(kind=r4) :: tempot, tempis68, tempot68
   REAL(kind=r8) :: dfCO2, dpCO2
   REAL(kind=r8) :: drho
   REAL(kind=r8) :: invtk,dlogtk
@@ -225,12 +224,15 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     IF (trim(optT) == 'Tpot' &
-          .AND. tempot(i) > -3. .AND. tempot(i) < 100.) THEN
+     IF (temp(i) < -3. .OR. temp(i) > 100.) THEN
+        print *,'OUT of RANGE TEMPERATURE: i, temp(i) =', i, temp(i)
+     ENDIF
+     IF (trim(optT) == 'Tpot') THEN
+        tempot = temp(i)
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
 !          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
-        tempot68 = (tempot(i) - 0.0002) / 0.99975
+        tempot68 = (tempot - 0.0002) / 0.99975
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
         tempis68 = sw_temp(sal(i), tempot68, p(i), 0. )
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
@@ -239,10 +241,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
-        tempis(i) = tempot(i)
+        tempis(i) = temp(i)
      ELSE
-        print *,'i, tempot(i) =', i, tempot(i)
-        !write(*,*)"optT =", optT, "end"
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         STOP
      ENDIF
@@ -262,10 +262,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
              .OR.  dic(i) > 1e+3 &
              .OR.  sil(i) > 1e+3 &
              .OR. phos(i) > 1e+3) THEN
-           PRINT *, 'i, icount,' , &
-                'tempot(i), sal(i), alk(i), dic(i), sil(i), phos(i) =', &
-                i, icount, &
-                tempot(i), sal(i), alk(i), dic(i), sil(i), phos(i)
+           PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
+                     i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
         ENDIF
 !       Zero out any negative salinity, phosphate, silica, dic, and alk
         IF (sal(i) < 0.0) THEN
@@ -310,7 +308,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         CALL constants(aK0, aK1, aK2, aKb, aKw, aKs, aKf, aKspc, aKspa,  &
                        aK1p, aK2p, aK3p, aKsi,                           &
                        aSt, aFt, aBt,                                    &
-                       tempot(i), sal(i),                                &
+                       temp(i), sal(i),                                  &
                        depth(i), lat(i), 1,                              &
                        optT, optP, optB, optK1K2, optKf)
 

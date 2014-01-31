@@ -13,7 +13,7 @@ PROGRAM test_mocsy
    REAL(kind=r4), DIMENSION(100) :: ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis
 !  "vars" Input variables
    INTEGER :: N
-   REAL(kind=r4), DIMENSION(100) :: tempot, sal, alk, dic, sil, phos, depth, lat
+   REAL(kind=r4), DIMENSION(100) :: temp, sal, alk, dic, sil, phos, depth, lat
 !  "vars" Input options
    CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2
 
@@ -22,8 +22,8 @@ PROGRAM test_mocsy
 
 !> Simple input data (with CONCENTRATION units typical for MODELS)
    DO i = 1,6
-     tempot(i) = 2.0
-     sal(i)    = 35.0
+     temp(i)   = 2.0            !Can be "Potential temperature" or "In situ temperature" (see optT below)
+     sal(i)    = 35.0           !Salinity (practical scale)
      alk(i)    = 2295.*1.028e-3 !Rough convert of S. Ocean ave surf ALK (umol/kg) to model units (mol/m3)
      dic(i)    = 2154.*1.028e-3 !Rough convert of S. Ocean ave surf DIC (umol/kg) to model units (mol/m3)
      sil(i)    = 50.  *1.0e-3   !Convert observed S. Ocean ave surf SiO2 (umol/L) to model units (mol/m3) 
@@ -36,7 +36,7 @@ PROGRAM test_mocsy
 !> OPTIONS: see complete documentation in 'vars' subroutine
 !> Typical options for MODELS
    optCON  = 'mol/m3'   ! input concentrations are in MOL/M3
-   optT    = 'Tpot'     ! input temperature, variable 'tempot', is POTENTIAL temp [°C]
+   optT    = 'Tpot'     ! input temperature, variable 'temp', is POTENTIAL temp [°C]
    optP    = 'm'        ! input variable 'depth' is in METERS
    optB    = 'l10'      ! Lee et al. (2010) formulation for total boron
    optK1K2 = 'l'          ! Lueker et al. (2000) formulations for K1 & K2 (best practices)
@@ -45,7 +45,7 @@ PROGRAM test_mocsy
 !> Call mocsy's main subroutine to compute carbonate system variables: pH, pCO2, fCO2, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R
 !> FROM temperature, salinity, total alkalinity, dissolved inorganic carbon, silica, phosphate, depth (or pressure) (1-D arrays)
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &  ! OUTPUT
-             tempot, sal, alk, dic, sil, phos, depth, lat, N,                          &  ! INPUT
+             temp, sal, alk, dic, sil, phos, depth, lat, N,                            &  ! INPUT
              optCON, optT, optP, optB, optK1K2, optKf)                                    ! INPUT OPTIONS
 !  Print out results
    write(*,50)
@@ -60,7 +60,7 @@ PROGRAM test_mocsy
 !> Repeat the operation, but with options for observations
 !> Typical options for observations
    optCON  = 'mol/kg'  ! input concentrations are in MOL/KG
-   optT    = 'Tinsitu' ! input temperature, variable 'tempot' is actually IN SITU temp [°C]
+   optT    = 'Tinsitu' ! input temperature, variable 'temp' is actually IN SITU temp [°C]
    optP    = 'db'      ! input variable 'depth' is in 'DECIBARS'
    optB    = 'l10'
    optK1K2 = 'l'
@@ -77,7 +77,7 @@ PROGRAM test_mocsy
    END DO
 
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,         &  ! OUTPUT
-             tempot, sal, alk, dic, sil, phos, depth, lat, N,                                 &  ! INPUT
+             temp, sal, alk, dic, sil, phos, depth, lat, N,                                   &  ! INPUT
              optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2='m10', optKf='dg')  ! INPUT OPTIONS
 !  Print out results (typical for data: concentration units differ)
    write(*,50)

@@ -7,7 +7,7 @@ CONTAINS
 SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
                      K1p, K2p, K3p, Ksi,                      &
                      St, Ft, Bt,                              &
-                     tempot, sal,                             &
+                     temp, sal,                               &
                      depth, lat, N,                           &
                      optT, optP, optB, optK1K2, optKf)
 
@@ -21,7 +21,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !             = pressure [db] (with optP='db')
   !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
   !             = dummy array (unused when optP='db')
-  !     tempot  = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
+  !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
 
@@ -69,7 +69,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   INTEGER, INTENT(in) :: N
   !> in <b>situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) [degree C]
-  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: tempot
+  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: temp
   !> depth in <b>meters</b> (when optP='m') or <b>decibars</b> (when optP='db')
   REAL(kind=r4), INTENT(in),    DIMENSION(N) :: depth
   !> latitude <b>[degrees north]</b>
@@ -78,7 +78,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
 !f2py optional , depend(sal) :: n=len(sal)
 
-  !> for tempot input, choose \b 'Tinsitu' for in situ Temp or 
+  !> for temp input, choose \b 'Tinsitu' for in situ Temp or 
   !! \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
   CHARACTER(7), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
@@ -132,7 +132,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 ! Local variables
   REAL(kind=r4) :: ssal
   REAL(kind=r4) :: p
-  REAL(kind=r4) :: tempis68, tempot68
+  REAL(kind=r4) :: tempot, tempis68, tempot68
   REAL(kind=r4) :: tempis
   REAL(kind=r8) :: is, invtk, dlogtk, is2, s2, sqrtis
   REAL(kind=r8) :: Ks_0p, Kf_0p
@@ -211,32 +211,34 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     IF (trim(optT) == 'Tpot' &
-          .AND. tempot(i) > -3. .AND. tempot(i) < 100.) THEN
+     IF (temp(i) < -3. .OR. temp(i) > 100.) THEN
+        print *,'OUT of RANGE TEMPERATURE: i, temp(i) =', i, temp(i)
+     ENDIF
+     IF (trim(optT) == 'Tpot') THEN
+        tempot = temp(i)
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
-!       (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
-        tempot68 = (tempot(i) - 0.0002) / 0.99975
+!          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
+        tempot68 = (tempot - 0.0002) / 0.99975
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
-        tempis68 = sw_temp(sal(i), tempot68, p, 0.)
+        tempis68 = sw_temp(sal(i), tempot68, p, 0. )
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
         tempis = 0.99975*tempis68 + 0.0002
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
-        tempis = tempot(i)
+        tempis = temp(i)
      ELSE
-        PRINT *,"optT must be 'Tpot' or 'Tinsitu'"
+        PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         STOP
      ENDIF
 
 !    Compute constants
-     IF (tempot(i) >= -2. .AND. tempot(i) < 1.0e+2) THEN
+     IF (temp(i) >= -2. .AND. temp(i) < 1.0e+2) THEN
 !       Test to indicate if any of input variables are unreasonable
         IF (      sal(i) < 0.  .OR.  sal(i) > 1e+3) THEN
-           PRINT *, 'i, icount, tempot(i), sal(i) =', &
-                i, icount, tempot(i), sal(i)
+           PRINT *, 'i, icount, temp, sal =', i, icount, temp(i), sal(i)
         ENDIF
 !       Zero out negative salinity (prev case for OCMIP2 model w/ slightly negative S in some coastal cells)
         IF (sal(i) < 0.0) THEN
