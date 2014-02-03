@@ -242,6 +242,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
      ELSEIF (trim(optT) == 'Tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis(i) = temp(i)
+        tempis68 = (temp(i) - 0.0002) / 0.99975
+!       tempis(i) = 0.99975*tempis68 + 0.0002
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         STOP
