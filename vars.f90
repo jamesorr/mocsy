@@ -224,9 +224,6 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     IF (temp(i) < -3. .OR. temp(i) > 100.) THEN
-        print *,'OUT of RANGE TEMPERATURE: i, temp(i) =', i, temp(i)
-     ENDIF
      IF (trim(optT) == 'Tpot') THEN
         tempot = temp(i)
 !       This is the case for most models and some data
