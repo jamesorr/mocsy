@@ -211,9 +211,6 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     IF (temp(i) < -3. .OR. temp(i) > 100.) THEN
-        print *,'OUT of RANGE TEMPERATURE: i, temp(i) =', i, temp(i)
-     ENDIF
      IF (trim(optT) == 'Tpot') THEN
         tempot = temp(i)
 !       This is the case for most models and some data
@@ -234,8 +231,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         STOP
      ENDIF
 
-!    Compute constants
-     IF (temp(i) >= -2. .AND. temp(i) < 1.0e+2) THEN
+!    Compute constants:
+     IF (temp(i) >= -5. .AND. temp(i) < 1.0e+2) THEN
 !       Test to indicate if any of input variables are unreasonable
         IF (      sal(i) < 0.  .OR.  sal(i) > 1e+3) THEN
            PRINT *, 'i, icount, temp, sal =', i, icount, temp(i), sal(i)
