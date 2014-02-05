@@ -87,11 +87,14 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !! The 'l10' formulation is based on 139 measurements (instead of 20),
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-  CHARACTER(3), INTENT(in) :: optB
+!f2py character*3 optional, intent(in) :: optB='l10'
+  CHARACTER(3), OPTIONAL, INTENT(in) :: optB
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
-  CHARACTER(2), INTENT(in) :: optKf
+!f2py character*2 optional, intent(in) :: optKf='pf'
+  CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
-  CHARACTER(3), INTENT(in) :: optK1K2
+!f2py character*3 optional, intent(in) :: optK1K2='l'
+  CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
 
 ! Ouput variables
   !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
@@ -154,8 +157,10 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=r8) :: t, tk, prb
   REAL(kind=r8) :: s, sqrts, s15, scl
 
-! REAL(kind=r4) ::   p80, sw_temp
-! EXTERNAL p80, sw_temp
+! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
+  CHARACTER(3) :: opB
+  CHARACTER(2) :: opKf
+  CHARACTER(3) :: opK1K2
 
   ! CONSTANTS
   ! =========
@@ -181,6 +186,25 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
            0.09e-3_r8,    0.054e-3_r8,  0.3692e-3_r8, 0.3692e-3_r8, &
            0.0427e-3_r8,  0.09e-3_r8,   0.0714e-3_r8, 0.0_r8/
   DATA b2 /12*0.0_r8/
+
+! Set defaults for optional arguments (in Fortran 90)
+! Note:  Optional arguments with f2py (python) are set above with 
+!        the !f2py statements that precede each type declaraion
+  IF (PRESENT(optB)) THEN
+    opB = optB
+  ELSE
+    opB = 'l10'
+  ENDIF
+  IF (PRESENT(optKf)) THEN
+    opKf = optKf
+  ELSE
+    opKf = 'pf'
+  ENDIF
+  IF (PRESENT(optK1K2)) THEN
+    opK1K2 = optK1K2
+  ELSE
+    opK1K2 = 'l'
+  ENDIF
 
   R = 83.14472_r8
 
@@ -274,10 +298,10 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         Ft(i) = 0.000067d0 * scl/18.9984d0
 
 !       Boron:
-        IF (trim(optB) == 'l10') THEN
+        IF (trim(opB) == 'l10') THEN
 !          New formulation from Lee et al (2010)
            Bt(i) = 0.0002414d0 * scl/10.811d0
-        ELSEIF (trim(optB) == 'u74') THEN
+        ELSEIF (trim(opB) == 'u74') THEN
 !          Classic formulation from Uppström (1974)
            Bt(i) = 0.000232d0  * scl/10.811d0
         ELSE
@@ -295,14 +319,14 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
 !       K1 = [H][HCO3]/[H2CO3]
 !       K2 = [H][CO3]/[HCO3]
-        IF (trim(optK1K2) == 'l') THEN
+        IF (trim(opK1K2) == 'l') THEN
 !         Mehrbach et al. (1973) refit, by Lueker et al. (2000) (total pH scale)
           K1(i) = 10.0d0**(-1.0d0*(3633.86d0*invtk - 61.2172d0 + 9.6777d0*dlogtk  &
                   - 0.011555d0*s + 0.0001152d0*s2))
 
           K2(i) = 10.0d0**(-1*(471.78d0*invtk + 25.9290d0 - 3.16967d0*dlogtk      &
                   - 0.01781d0*s + 0.0001122d0*s2))
-        ELSEIF (trim(optK1K2) == 'm10') THEN
+        ELSEIF (trim(opK1K2) == 'm10') THEN
 !         Millero (2010, Mar. Fresh Wat. Res.) (total pH scale)
 !         pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
 !         ma1 = 13.4051d0*sqrts + 0.03185d0*s - (5.218e-5)*s2
@@ -412,12 +436,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
 !       Kf = [H][F]/[HF]
 !       (total scale)
-        IF (trim(optKf) == 'dg') THEN
+        IF (trim(opKf) == 'dg') THEN
 !          Dickson and Riley (1979) -- change pH scale to total (following Dickson & Goyet, 1994)
            Kf_0p = EXP(1590.2d0*invtk - 12.641d0 + 1.525d0*sqrtis +  &
                    LOG(1.0d0 - 0.001005d0*s) +                     &
                    LOG(1.0d0 + St(i)/Ks_0p))
-        ELSEIF (trim(optKf) == 'pf') THEN
+        ELSEIF (trim(opKf) == 'pf') THEN
 !          Perez and Fraga (1987) - Already on Total scale (no need for last line above)
 !          Formulation as given in Dickson et al. (2007)
            Kf_0p = EXP(874.d0*invtk - 9.68d0 + 0.111d0*sqrts)

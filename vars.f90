@@ -128,11 +128,15 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-  CHARACTER(3), INTENT(in) :: optB
+!f2py character*3 optional, intent(in) :: optB='l10'
+  CHARACTER(3), OPTIONAL, INTENT(in) :: optB
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
-  CHARACTER(2), INTENT(in) :: optKf
+!f2py character*2 optional, intent(in) :: optKf='pf'
+  CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
-  CHARACTER(3), INTENT(in) :: optK1K2
+!f2py character*3 optional, intent(in) :: optK1K2='l'
+  CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
+
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -192,8 +196,43 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   REAL(kind=r8) :: cu, cb, cc
   INTEGER :: kcomp
 
-! REAL(kind=r4) :: p80, sw_temp, rho
-! EXTERNAL  p80, sw_temp, rho
+! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
+  CHARACTER(3) :: opB
+  CHARACTER(2) :: opKf
+  CHARACTER(3) :: opK1K2
+
+! Set defaults for optional arguments (in Fortran 90)
+! Note:  Optional arguments with f2py (python) are set above with 
+!        the !f2py statements that precede each type declaraion
+  IF (PRESENT(optB)) THEN
+!   print *,"optB present:"
+!   print *,"optB = ", optB 
+    opB = optB
+  ELSE
+!   Default is Lee et al (2010) for total boron
+!   print *,"optB NOT present:"
+    opB = 'l10'
+!   print *,"opB = ", opB 
+  ENDIF
+  IF (PRESENT(optKf)) THEN
+!   print *,"optKf = ", optKf
+    opKf = optKf
+  ELSE
+!   print *,"optKf NOT present:"
+!   Default is Perez & Fraga (1987) for Kf
+    opKf = 'pf'
+!   print *,"opKf = ", opKf
+  ENDIF
+  IF (PRESENT(optK1K2)) THEN
+!   print *,"optK1K2 = ", optK1K2
+    opK1K2 = optK1K2
+  ELSE
+!   print *,"optK1K2 NOT present:"
+!   Default is Lueker et al. 2000) for K1 & K2
+    opK1K2 = 'l'
+!   print *,"opK1K2 = ", opK1K2
+  ENDIF
+
 
   icount = 0
   DO i = 1, N
@@ -309,7 +348,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
                        aSt, aFt, aBt,                                    &
                        temp(i), sal(i),                                  &
                        depth(i), lat(i), 1,                              &
-                       optT, optP, optB, optK1K2, optKf)
+                       optT, optP, opB, opK1K2, opKf)
 
 !       Unlike f77, in F90 we can't assign an array (dimen=1) to a scalar in a routine argument
 !       Thus, set scalar constants equal to array (dimension=1) values required as arguments
