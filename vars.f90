@@ -7,7 +7,7 @@ CONTAINS
 !!    total alkalinity (ALK), dissolved inorganic carbon (DIC),
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
-                temp, sal, alk, dic, sil, phos, depth, lat, N,                          &
+                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                          &
                 optCON, optT, optP, optB, optK1K2, optKf                                  )
 
   !   Purpose:
@@ -20,6 +20,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
   !     INPUT variables:
   !     ================
+  !     Patm    = atmospheric pressure [atm]
   !     depth   = depth [m]     (with optP='m', i.e., for a z-coordinate model vertical grid is depth, not pressure)
   !             = pressure [db] (with optP='db')
   !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
@@ -92,6 +93,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   USE mp80
   USE mrho
   USE msw_temp
+  USE mphsolvers
 
   IMPLICIT NONE
 
@@ -112,6 +114,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: phos
 !f2py optional , depend(sal) :: n=len(sal)
+  !> atmospheric pressure <b>[atm]</b>
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
   !> depth in \b meters (when optP='m') or \b decibars (when optP='db')
   REAL(kind=r4), INTENT(in),    DIMENSION(N) :: depth
   !> latitude <b>[degrees north]</b>
@@ -182,12 +186,15 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
   REAL(kind=r8) :: DD,A,B,C,PhiD
 
+  REAL(kind=r8) :: Patmd, Ptot, Rgas_atm, Del, xCO2approx, xc2, fugcoeff
+
   INTEGER :: i, icount
 
   REAL(kind=r8) :: t, tk, prb
   REAL(kind=r8) :: s
   REAL(kind=r8) :: tc, ta
   REAL(kind=r8) :: sit, pt
+  REAL(kind=r8) :: Hinit
   REAL(kind=r8) :: ah1
 
   REAL(kind=r8) :: HSO4, HF, HSI, HPO4
@@ -263,7 +270,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     IF (trim(optT) == 'Tpot') THEN
+     IF (trim(optT) == 'Tpot' .OR. trim(optT) == 'tpot') THEN
         tempot = temp(i)
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
@@ -275,13 +282,14 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         tempis(i) = 0.99975*tempis68 + 0.0002
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
-     ELSEIF (trim(optT) == 'Tinsitu') THEN
+     ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis(i) = temp(i)
         tempis68 = (temp(i) - 0.0002) / 0.99975
 !       tempis(i) = 0.99975*tempis68 + 0.0002
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
+        PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
 
@@ -336,6 +344,9 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         invtk=1.0d0/tk
         dlogtk=LOG(tk)
 
+!       Atmospheric pressure
+        Patmd = DBLE(Patm(i))
+
 !       Pressure effect (prb is in bars)
         prb = DBLE(p(i)) / 10.0d0
 
@@ -346,7 +357,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         CALL constants(aK0, aK1, aK2, aKb, aKw, aKs, aKf, aKspc, aKspa,  &
                        aK1p, aK2p, aK3p, aKsi,                           &
                        aSt, aFt, aBt,                                    &
-                       temp(i), sal(i),                                  &
+                       temp(i), sal(i), Patm(i),                         &
                        depth(i), lat(i), 1,                              &
                        optT, optP, opB, opK1K2, opKf)
 
@@ -379,41 +390,25 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         sit = DBLE(ssil)/drho
         pt  = DBLE(sphos)/drho
 
-!       Computation loop for [H+]
-!       Based on HAMOCC3 code (Maier-Reimer, 1993, Global Biogeoch. Cycles)
-!       except (i) it is not made in a do loop,  
-!             (ii) alk eqn includes contributions from P & Si (as in OCMIP2), &
-!            (iii) the convergence criteria is slightly different
-        ah1 = 1.e-8_r8
-        kcomp = 0
-2       kcomp = kcomp+1
-!       print *, "kcomp  =  ", kcomp
-        HSO4 = St/(1.0d0 + Ks/(ah1/(1.0d0 + St/Ks)))
-        HF = 1.0d0/(1.0d0 + Kf/ah1)
-        HSI = 1.0d0/(1.0d0 + ah1/Ksi)
-        HPO4 = (K1p*K2p*(ah1 + 2.*K3p) - ah1**3)/   &
-               (ah1**3 + K1p*ah1**2 + K1p*K2p*ah1 +   &
-               K1p*K2p*K3p)
-
-        ab = Bt/(1.0d0 + ah1/Kb)
-        aw = Kw/ah1 - ah1/(1.0d0 + St/Ks)
-        ac = ta + hso4 - sit*hsi - ab - aw + Ft*hf - pt*hpo4
-        ah2 = SQRT((tc - ac)**2 + 4.0d0*(ac*K2/K1)*(2.0d0*tc - ac))
-        ah2 = 0.5d0*K1/ac*((tc - ac) + ah2)
-        erel = (ah2 - ah1)/ah2
-
-        IF (ABS(erel) >= 1.e-7_r8) THEN
-           ah1 = ah2
-           IF (kcomp < 25) GOTO 2
-        END IF
-
+!       Compute pH from constants and total concentrations
+!       --------------------------------------------------
+!       Use SolveSAPHE v1.0.1 routines from Munhoven (2013, GMD) modified to use mocsy's Ks instead of its own
+!       1) Compute best starting point for pH calculation
+        call ahini_for_at(ta, tc, Bt, K1, K2, Kb, Hinit)
+!       2) Solve for H+ using above result as the initial H+ value
+        ah1 = solve_at_general(ta, tc, Bt,                                         & 
+                              pt,     sit,                                        &
+                              St, Ft,                                             &
+                              K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi,     &
+                              Hinit)
+!       from H+ concentration (mol/kg), compute pH
         IF (ah1 > 0.d0) THEN
            ph(i) = REAL(-LOG10(ah1))
         ELSE
            ph(i) = 1.e20_r4
         ENDIF
 
-!       Determine CO2*, HCO3- and CO3-- concentrations (in mol/kg soln)
+!       Determine CO2*, HCO3- and CO32- concentrations (in mol/kg soln)
         cu = (2.0d0 * tc - ac) / (2.0d0 + K1 / ah1)
         cb = K1 * cu / ah1
         cc = K2 * cb / ah1
@@ -425,16 +420,23 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         hco3(i) = REAL(cb * drho)
         co3(i)  = REAL(cc * drho)
 
-!       Determine CO2 pressure and fugacity (in microatm)
-!       NOTE: equation below for pCO2 requires CO2* in mol/kg
-        dfCO2 = cu   * 1.e6_r8/K0
-        B=(-1636.75d0+12.0408d0*tk-0.0327957d0*(tk*tk)+0.0000316528d0* &
-             (tk*tk*tk))*1e-6
+!       Determine CO2 fugacity (in microatm)
+!       NOTE: equation just below requires CO2* in mol/kg
+        dfCO2 = cu * 1.e6_r8/K0
 
-        dpCO2= dfCO2 / EXP(100000.0d0 &
-             *(B+ 2.0d0*(57.7d0 - 0.118d0*tk)*1e-6_r8) &
-             / (8.314d0*tk) &
-             )
+!       Determine CO2 partial pressure from CO2 fugacity (in microatm)
+        Ptot = Patmd + prb/1.01325d0
+        Rgas_atm = 82.05736_r8      ! (cm3 * atm) / (mol * K)  CODATA (2006)
+!       To compute fugcoeff, we need 3 other terms (B, Del, xc2) in addition to 3 others above (tk, Ptot, Rgas_atm)
+        B = -1636.75d0 + 12.0408d0*tk - 0.0327957d0*(tk*tk) + 0.0000316528d0*(tk*tk*tk)
+        Del = 57.7d0 - 0.118*tk
+!       "x2" term often neglected (assumed = 1) in applications of Weiss's (1974) equation 9
+!       x2 = 1 - x1 = 1 - xCO2 (it is very close to 1, but not quite)
+!       Let's assume that xCO2 = fCO2. Resulting fugcoeff is identical to 8th digit after the decimal.
+        xCO2approx = dfCO2 * 1.e-6_r8
+        xc2 = (1.0d0 - xCO2approx)**2 
+        fugcoeff = exp( Ptot*(B + 2.0d0*xc2*Del)/(Rgas_atm*tk) )
+        dpCO2 = dfCO2 / fugcoeff
 
         fCO2(i) = REAL(dfCO2)
         pCO2(i) = REAL(dpCO2)
