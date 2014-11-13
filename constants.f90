@@ -7,7 +7,7 @@ CONTAINS
 SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
                      K1p, K2p, K3p, Ksi,                      &
                      St, Ft, Bt,                              &
-                     temp, sal,                               &
+                     temp, sal, Patm,                         &
                      depth, lat, N,                           &
                      optT, optP, optB, optK1K2, optKf)
 
@@ -17,6 +17,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   !     INPUT variables:
   !     ================
+  !     Patm    = atmospheric pressure [atm]
   !     depth   = depth [m]     (with optP='m', i.e., for a z-coordinate model vertical grid is depth, not pressure)
   !             = pressure [db] (with optP='db')
   !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
@@ -77,6 +78,9 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !> salinity <b>[psu]</b>
   REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
 !f2py optional , depend(sal) :: n=len(sal)
+
+  !> atmospheric pressure <b>[atm]</b>
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
 
   !> for temp input, choose \b 'Tinsitu' for in situ Temp or 
   !! \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
@@ -157,6 +161,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=r8) :: t, tk, prb
   REAL(kind=r8) :: s, sqrts, s15, scl
 
+  REAL(kind=r8) :: Phydro_atm, Patmd, Ptot, Rgas_atm, vbarCO2
+
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
   CHARACTER(2) :: opKf
@@ -235,7 +241,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
      ENDIF
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
-     IF (trim(optT) == 'Tpot') THEN
+     IF (trim(optT) == 'Tpot' .OR. trim(optT) == 'tpot') THEN
         tempot = temp(i)
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
@@ -247,11 +253,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         tempis = 0.99975*tempis68 + 0.0002
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
-     ELSEIF (trim(optT) == 'Tinsitu') THEN
+     ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis = temp(i)
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
+        PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
 
@@ -274,7 +281,10 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         invtk=1.0d0/tk
         dlogtk=LOG(tk)
 
-!       Pressure effect (prb is in bars)
+!       Atmospheric pressure
+        Patmd = DBLE(Patm(i))
+
+!       Hydrostatic pressure (prb is in bars)
         prb = DBLE(p) / 10.0d0
 
 !       Salinity and simply related values
@@ -468,7 +478,14 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
              +(-0.068393d0 + 0.0017276d0*tk + 88.135d0/tk)*sqrts &
              -0.10018d0*s + 0.0059415d0*s15 )
 
-!       Pressure effect on K's (based on Millero, (1995)
+!       Pressure effect on K0 based on Weiss (1974, equation 5)
+        Phydro_atm = prb / 1.01325  ! convert hydrostatic pressure from bar to atm (1.01325 bar / atm)
+        Ptot = Patmd + Phydro_atm   ! total pressure (in atm) = atmospheric pressure + hydrostatic pressure
+        Rgas_atm = 82.05736_r8      ! (cm3 * atm) / (mol * K)  CODATA (2006)
+        vbarCO2 = 32.3_r8           ! partial molal volume (cm3 / mol) from Weiss (1974, Appendix, paragraph 3)
+        K0(i) = K0(i) * exp( ((1-Ptot)*vbarCO2)/(Rgas_atm*TK) )   ! Weiss (1974, equation 5)
+
+!       Pressure effect on all other K's (based on Millero, (1995)
 !           index: K1(1), K2(2), Kb(3), Kw(4), Ks(5), Kf(6), Kspc(7), Kspa(8),
 !                  K1p(9), K2p(10), K3p(11), Ksi(12)
         DO ipc = 1, 12
@@ -492,7 +509,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         Kf(i) = Kf_0p * EXP(lnkpok0(6)) !Pressure correction (on Free scale)
         Kf(i) = Kf(i)/total2free        !Convert back from Free to Total scale
 
-!       Convert between seawater and total scales (as in seacarb)
+!       Convert between seawater and total scales
         free2SWS  = 1.d0 + St(i)/Ks(i) + Ft(i)/(Kf(i)*total2free)  ! using Kf on free scale
         total2SWS = total2free * free2SWS                          ! KSWS = Ktotal*total2SWS
         SWS2total = 1.d0 / total2SWS
