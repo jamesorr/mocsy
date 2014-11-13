@@ -13,7 +13,7 @@ PROGRAM test_mocsy
    REAL(kind=r4), DIMENSION(100) :: ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis
 !  "vars" Input variables
    INTEGER :: N
-   REAL(kind=r4), DIMENSION(100) :: temp, sal, alk, dic, sil, phos, depth, lat
+   REAL(kind=r4), DIMENSION(100) :: temp, sal, alk, dic, sil, phos, Patm, depth, lat
 !  "vars" Input options
    CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2
 
@@ -29,7 +29,8 @@ PROGRAM test_mocsy
      sil(i)    = 50.  *1.0e-3   !Convert observed S. Ocean ave surf SiO2 (umol/L) to model units (mol/m3) 
      phos(i)   = 1.8  *1.0e-3   !Convert observed S. Ocean ave surf PO4  (umol/L) to model units (mol/m3)
      lat(i)    = -60.           !Latitude used to convert model depth to pressure (Saunders, 1981, JPO)
-     depth(i) = real(i-1) * 1000. ! depth varies from 0 to 5000 m by 1000 m
+     depth(i)  = real(i-1) * 1000. ! depth varies from 0 to 5000 m by 1000 m
+     Patm(i)   = 1.0            !Atmospheric pressure (atm)
      N = i
    END DO
 
@@ -45,8 +46,9 @@ PROGRAM test_mocsy
 !> Call mocsy's main subroutine to compute carbonate system variables: pH, pCO2, fCO2, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R
 !> FROM temperature, salinity, total alkalinity, dissolved inorganic carbon, silica, phosphate, depth (or pressure) (1-D arrays)
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &  ! OUTPUT
-             temp, sal, alk, dic, sil, phos, depth, lat, N,                            &  ! INPUT
-             optCON, optT, optP, optB, optK1K2, optKf)                                    ! INPUT OPTIONS
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &  ! INPUT
+             optCON, optT, optP)
+!            optCON, optT, optP, optB, optK1K2, optKf)                                    ! INPUT OPTIONS
 !  Print out results
    write(*,50)
    write(*,100)
@@ -77,7 +79,7 @@ PROGRAM test_mocsy
    END DO
 
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,         &  ! OUTPUT
-             temp, sal, alk, dic, sil, phos, depth, lat, N,                                   &  ! INPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                             &  ! INPUT
              optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2='m10', optKf='dg')  ! INPUT OPTIONS
 !  Print out results (typical for data: concentration units differ)
    write(*,50)
