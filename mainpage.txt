@@ -202,7 +202,7 @@ observations.
 Other <em>mocsy</em> routines are available 
 to output the entire set of equilibrium constants (constants.f90), 
 to convert between potential in in-situ temperature (tpot.f90 and tis.f90) , 
-to convert betxeen depth and pressure (depth2press.f90), and 
+to convert between depth and pressure (depth2press.f90), and 
 to compute in situ density (rhoinsitu.f90).
 
 The <em>mocsy</em> Fortran 95 routines can also be called from
@@ -345,40 +345,127 @@ Tis = mocsy.mtis(s, Tpot, pfd, 0)
 
 \section examples Examples
 
-1) Simple scaler variable:
+1) Simple scaler variables:
+
+For DATA input:
+DIC and ALk in mol/kg, in situ temperature, pressure.
 
 \verbatim
 $ python
 import mocsy
-pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = mocsy.mvars (temp=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
+pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = \
+mocsy.mvars (temp=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
 \endverbatim
 
-With the same scalar input for S, T, and P, compute the constants, but
+Compute the CONSTANTS with the same scalar input for S, T, and P (as above) but
 change to the newer options published since the best-practices guide:
 Lee et al. (2010) for total boron and Millero (2010) for \f$K_1\f$ and
 \f$K_2\f$:
 
 \verbatim
-Kh,K1,K2,Kb,Kw,Ks,Kf,Kspc,Kspa,K1p,K2p,K3p,Ksi,St,Ft,Bt = mocsy.mconstants (temp=18.,sal=35.,depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg")
+Kh,K1,K2,Kb,Kw,Ks,Kf,Kspc,Kspa,K1p,K2p,K3p,Ksi,St,Ft,Bt = \
+mocsy.mconstants (temp=18.,sal=35.,depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg")
+\endverbatim
+ 
+For MODEL input:
+DIC and Alk in <em>mol/m3</em>, potential temperature, and depth. 
+Also do NOT specify last 3 options, thus using defaults (optb="l10", optk1k2='l', optkf="pf").
+
+\verbatim
+pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = \
+mocsy.mvars (temp=18, sal=35, alk=2300*1028e-6, dic=2000*1028e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/m3', optt='Tpot', optp='m')
 \endverbatim
 
 2) Simple arrays (numpy):
 
 \verbatim
-Under construction: Details to be added later
+$ python
+import numpy as np
+import mocsy
+
+#Make dummy array with 11 members
+one = np.ones(11,dtype='float32')
+
+sal   = 35*one
+temp  = 2*one
+depth = np.arange(0,11000,1000,dtype='float32') # units in 'm'
+
+# Compute in situ density (3 steps using 2 mocsy routines):
+# a) Specify latitude = 60°S for depth to pressure conversion formula
+lat = -60*one
+# b) Compute pressure (db) from depth (m) and latitude following Saunders (1981)
+pfd = mocsy.mdepth2press(depth,lat)  # units in 'db' 
+# c) Compute in situ density (kg/m3) from salinity (psu), in-situ temp (C), and pressure (db)
+rhois = mocsy.mrhoinsitu(sal, temp, pfd)  
+
+# Specify surface concentrations typical of 60°S (from GLODAP and WOA2009)
+alk   = 2295*one # umol/kg
+dic   = 2154*one # umol/kg
+sio2  = 50.*one  # umol/L
+po4   = 1.8*one  # umol/L
+
+# Convert nutrient units(mol/L) to model units (mol/m3)
+sio2 = sio2 * 1.0e-3   
+po4  = po4  * 1.0e-3 
+# Convert Alk and DIC units (umol/kg) to model units (mol/m3)
+dic = dic * rhois * 1e-6
+alk = alk * rhois * 1e-6
+
+# Compute carbonate system variables, using 'model' options
+pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = \
+mocsy.mvars (temp=temp, sal=sal, alk=alk, dic=dic, sil=sio2, phos=po4, depth=depth, lat=lat, optcon='mol/m3', optt='Tpot', optp='m')
+
+# Print out depth and carbonate ion concentration (converted to umol/kg)
+print depth, co3 / (DENis * 1e-6)
+
 \endverbatim
 
-3) Read input from a csv (spreadsheet) file:
+3) Read input from a .csv (spreadsheet) file:
 
 \verbatim
-Under construction: Details to be added later
+$ python
+import numpy as np
+import mocsy
+
+# Read .csv input file with 7 columns: flag, Alk(mol/kg), DIC(mol/kg), salinity(psu), temp(C), press(db), PO43-(mol/kg), SiO2(mol/kg)
+infilename = "DIC-Alk-P_vary_input.csv"
+indata = np.loadtxt(infilename, delimiter=',', dtype='float32', skiprows=1)
+n = len(indata)
+alk = indata[:,1]
+dic = indata[:,2]
+sal = indata[:,3]
+temp  = indata[:,4]
+depth = indata[:,5] * 10 #Convert from bars to decibars
+phos  = indata[:,6]
+sil   = indata[:,7]
+
+# Specify that latitude = 45°N for all samples (for depth to pressure conversion)
+# note: "lat" is required input for mocsy, but results are only weakly sensitive
+lat  = np.zeros([n,], dtype='float32')
+lat.fill(45.)
+
+# Recover computed carbonate system variables
+ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis = \
+mocsy.mvars (temp, sal, alk,dic, sil, phos, depth, lat, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
+
+# Save results to another .csv file
+results = np.dstack ((sal, temp, p, ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, dic, alk))
+outfilename = "DIC-Alk-P-vary-from-mocsy.csv"
+outfile = open(outfilename, "w")
+outfile.write ("S, T, P, pH, pCO2, fCO2, CO2, HCO3, CO3, OmegaAragonite, OmegaCalcite, BetaD, DIC, ALK\n")
+np.savetxt(outfile, results[0], delimiter=',', fmt="%1.6g")
+outfile.close()
+
 \endverbatim
 
-4) An example with netCDF files for input and output:
+4) Example with netCDF files for input and output:
 
-\verbatim
-Under construction: Details to be added later
-\endverbatim
+MODEL example: See the python script mocsy_CMIP5.py to compute carbonate
+chemistry variables from CMIP5 model input.
+
+DATA example: See the python script mocsy_GLODAP.py to compute carbonate chemistry
+variables from GLODAP DIC and Alk along with T, S, PO43- and SiO2 from
+the World Ocean Atlas (2009)
 
 */
 
@@ -408,7 +495,7 @@ D.C., 398 pp., 2010.
 Lee, K., Kim, T.-W., Byrne, R. H., Millero, F. J., Feely, R. a., and
 Liu, Y.- M.: The universal ratio of boron to chlorinity for the North
 Pacific and North Atlantic oceans, <em>Geochimica et Cosmochimica Acta,
-74,<em> 1801--1811, 2010.
+74,</em> 1801--1811, 2010.
 
 Locarnini, R., Mishonov, A., Antonov, J., Boyer, T., Garcia, H.,
 Baranova, O., Zweng, M., and Johnson, D.: World Ocean Atlas 2009,
@@ -416,7 +503,7 @@ Volume 1: Temperature, S. Levitus, ed., Atlas NESDIS 68, NOAA,
 U.S. Government Printing Office, Washington, D.C., 184 pp., 2010.
 
 Millero, F. J.: Carbonate constants for estuarine waters, <em>Marine and
-Freshwater Research</em>, 61, 139--142, 2010.
+Freshwater Research, 61</em>, 139--142, 2010.
 
 Orr, J.C., J.-M. Epitalon, and J.-P. Gattuso: Comparison of seven packages 
 that compute ocean carbonate chemistry <em>Biogeosciences</em>, submitted, 2014.
@@ -424,7 +511,7 @@ that compute ocean carbonate chemistry <em>Biogeosciences</em>, submitted, 2014.
 Orr, J.C. and J.-M. Epitalon: Improved routines to model the ocean 
 carbonate system: mocsy 1.0, <em>Geoscientific Model Development,</em> submitted, 2014.
 
-Saunders, P: Practical Conversion of Pressure to Depth,
-<em>J. Phys. Oceanogr.,</em> 11, 573-574, 1981.
+Saunders, P: Practical conversion of pressure to depth,
+<em>J. Phys. Oceanogr., 11</em>, 573-574, 1981.
 
 */
