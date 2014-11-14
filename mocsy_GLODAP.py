@@ -260,6 +260,9 @@ if __name__ == "__main__":
     sio2d = sio2d[:] / (rhois * 1.0e+3)
     po4d  = po4d[:] / (rhois * 1.0e+3)
 
+    # Atmospheric pressure (1 atm everywhere)
+    patmd = td[:]*0 + 1
+
     # Flatten array, missing values filled with 0
     # dic_array = np.ravel (dicd.filled(0.))
     dicd = dicd.filled(0.)
@@ -268,7 +271,7 @@ if __name__ == "__main__":
     # Compute other carbonate system variables (pH, CO2*, HCO3-, CO3--, Omegas, R (BetaD), (& in-situ rho, pressure, & T)
     print "Compute carbonate chemistry"
     pH, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, DENis, p, Tis = (
-    mocsy.mvars (td, sd, alkd, dicd.ravel(), sio2d, po4d, depth, lat,
+    mocsy.mvars (td, sd, alkd, dicd.ravel(), sio2d, po4d, patmd,  depth, lat,
                optcon='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
     )
     del (td)
@@ -401,8 +404,8 @@ if __name__ == "__main__":
     #
     #-----------------------------------------------------------------------------
     # Save results in output file
-    # dirnameo = '/prodigfs/OCMIP5/DATA/gridded/glodap/derived'
-    dirnameo = '.'
+    dirnameo = '/prodigfs/OCMIP5/DATA/gridded/glodap/derived2'
+    # dirnameo = '.'
     #version=os.system("date +'v20%y%m%d'")
     version=os.popen("date +'v20%y%m%d'").read()[0:9]
     if preindustrial_option:
