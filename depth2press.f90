@@ -8,7 +8,7 @@ SUBROUTINE depth2press(depth, lat, pdbar, N)
 
   !     Purpose:
   !     Compute pressure [db] from depth [m] & latitude [degrees north].
-  !     Needed because p80 is a function (cannot accept arrays)
+  !     Needed because p80 is a function 
 
   USE msingledouble
   USE mp80

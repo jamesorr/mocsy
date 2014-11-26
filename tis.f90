@@ -6,7 +6,7 @@ CONTAINS
 SUBROUTINE tis(salt, tempot, press, pressref, N, tempis)
   !    Purpose:
   !    Compute in situ temperature from arrays of in situ temp, salinity, and pressure.
-  !    Needed because sw_temp is a function (cannot accept arrays)
+  !    Needed because sw_temp is a function
 
   USE msingledouble
   USE msw_temp

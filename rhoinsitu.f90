@@ -7,7 +7,7 @@ SUBROUTINE rhoinsitu(salt, tempis, pdbar, N, rhois)
 
   !     Purpose:
   !     Compute in situ density from salinity (psu), in situ temperature (C), & pressure (db)
-  !     Needed because rho is a function (cannot accept arrays)
+  !     Needed because rho is a function
 
   USE msingledouble
   USE mrho
