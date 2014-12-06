@@ -36,7 +36,7 @@ INTEGER :: niter_atfast   = jp_maxniter_atfast
 
 ! Keep the following functions private to avoid conflicts with
 ! other modules that provide similar ones.
-!!PRIVATE AHINI_FOR_AT
+!PRIVATE AHINI_FOR_AT
 
 CONTAINS
 !===============================================================================
