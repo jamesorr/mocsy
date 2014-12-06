@@ -9,7 +9,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
                      St, Ft, Bt,                              &
                      temp, sal, Patm,                         &
                      depth, lat, N,                           &
-                     optT, optP, optB, optK1K2, optKf)
+                     optT, optP, optB, optK1K2, optKf, optGAS)
 
   !   Purpose:
   !     Compute thermodynamic constants
@@ -25,18 +25,18 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
-
+  !     ---------
   !     optT: choose in situ vs. potential temperature as input
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
   !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
   !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
-
+  !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
   !     ---------
   !       -> 'm'  means "depth" input is in "m" (thus in situ Pressure "p" [db] is computed)
   !       -> 'db' means "depth" input is already in situ pressure [db], not m (p = depth)
-
+  !     ---------
   !     optB:
   !     ---------
   !       -> 'u74' means use classic formulation of Uppström (1974) for total Boron
@@ -48,12 +48,23 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !                **** BUT this should only be used when 2 < T < 35 and 19 < S < 43
   !       -> 'm10' means use Millero (2010) formulation for K1 & K2 (see Dickson et al., 2007)
   !                **** Valid for 0 < T < 50°C and 1 < S < 50 psu
-
+  !     -----------
   !     optKf:
   !     ----------
   !       -> 'pf' means use Perez & Fraga (1987) formulation for Kf (recommended by Dickson et al., 2007)
   !               **** BUT Valid for  9 < T < 33°C and 10 < S < 40.
   !       -> 'dg' means use Dickson & Riley (1979) formulation for Kf (recommended by Dickson & Goyet, 1994)
+  !     -----------
+  !     optGAS: choose in situ vs. potential fCO2 and pCO2
+  !     ---------
+  !       PRESSURE corrections for K0 and the fugacity coefficient (Cf) 
+  !       -> 'Pzero'   = 'zero order' fCO2 and pCO2 (typical approach, which is flawed)
+  !                      considers in situ T & only atm pressure (hydrostatic=0)
+  !       -> 'Ppot'    = 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
+  !                      considers potential T & only atm pressure (hydrostatic press = 0)
+  !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
+  !                      considers in situ T & total pressure (atm + hydrostatic)
+  !     ---------
 
   !     OUTPUT variables:
   !     =================
@@ -63,6 +74,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   USE msingledouble
   USE mp80
   USE msw_temp
+  USE msw_ptmp
   IMPLICIT NONE
 
 ! Input variables
@@ -99,6 +111,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
 !f2py character*3 optional, intent(in) :: optK1K2='l'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
+  !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
+  !! 'Ppot'    - for 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
+  !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
+  !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
+!f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
+  CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
 
 ! Ouput variables
   !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
@@ -147,6 +165,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=r8) :: total2free_0p, free2SWS_0p, total2SWS_0p
 ! REAL(kind=r8) :: free2SWS, free2SWS_0p
 
+  REAL(kind=r8) :: dtempot
   REAL(kind=r8) :: R
 
   REAL(kind=r8) :: pK1o, ma1, mb1, mc1, pK1
@@ -158,7 +177,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   INTEGER :: i, icount, ipc
 
-  REAL(kind=r8) :: t, tk, prb
+  REAL(kind=r8) :: t, tk, tk0, prb
   REAL(kind=r8) :: s, sqrts, s15, scl
 
   REAL(kind=r8) :: Phydro_atm, Patmd, Ptot, Rgas_atm, vbarCO2
@@ -167,6 +186,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   CHARACTER(3) :: opB
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
+  CHARACTER(7) :: opGAS
 
   ! CONSTANTS
   ! =========
@@ -177,7 +197,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !            9) K1P, 10) K2P, 11) K3P, 12) Ksi
 
   DATA a0 /-25.5_r8, -15.82_r8, -29.48_r8, -20.02_r8, &
-          -18.03_r8,  -9.78_r8, -48.76_r8, -46._r8, &
+          -18.03_r8,  -9.78_r8, -48.76_r8, -45.96_r8, &
           -14.51_r8, -23.12_r8, -26.57_r8, -29.48_r8/
   DATA a1 /0.1271_r8, -0.0219_r8, 0.1622_r8, 0.1119_r8, &
            0.0466_r8, -0.0090_r8, 0.5304_r8, 0.5304_r8, &
@@ -210,6 +230,11 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
     opK1K2 = optK1K2
   ELSE
     opK1K2 = 'l'
+  ENDIF
+  IF (PRESENT(optGAS)) THEN
+    opGAS = optGAS
+  ELSE
+    opGAS = 'Pinsitu'
   ENDIF
 
   R = 83.14472_r8
@@ -256,6 +281,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis = temp(i)
+        tempis68 = (temp(i) - 0.0002) / 0.99975
+        dtempot = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         PRINT *,"you specified optT =", trim(optT) 
@@ -323,8 +350,22 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !       CO2(g) <-> CO2(aq.)
 !       K0  = [CO2]/ fCO2
 !       Weiss (1974)   [mol/kg/atm]
-        tmp = 9345.17d0*invtk - 60.2409d0 + 23.3585d0 * LOG(tk/100.0d0)
-        nK0we74 = tmp + s*(0.023517d0 - 0.00023656d0*tk + 0.0047036e-4_r8*tk*tk)
+        IF     (trim(opGAS) == 'Pzero'   .OR. trim(opGAS) == 'pzero') THEN
+           tk0 = tk                   !in situ temperature (K) for K0 calculation
+           Ptot = Patmd               !total pressure (in atm) = atmospheric pressure ONLY
+        ELSEIF (trim(opGAS) == 'Ppot'    .OR. trim(opGAS) == 'ppot') THEN
+           tk0 = dtempot + 273.15d0   !potential temperature (K) for K0 calculation as needed for potential fCO2 & pCO2
+           Ptot = Patmd               !total pressure (in atm) = atmospheric pressure ONLY
+        ELSEIF (trim(opGAS) == 'Pinsitu' .OR. trim(opGAS) == 'pinsitu') THEN
+           tk0 = tk                     !in situ temperature (K) for K0 calculation
+           Phydro_atm = prb / 1.01325d0 !convert hydrostatic pressure from bar to atm (1.01325 bar / atm)
+           Ptot = Patmd + Phydro_atm    !total pressure (in atm) = atmospheric pressure + hydrostatic pressure
+        ELSE
+           PRINT *, "optGAS must be 'Pzero', 'Ppot', or 'Pinsitu'"
+           STOP
+        ENDIF
+        tmp = 9345.17d0/tk0 - 60.2409d0 + 23.3585d0 * LOG(tk0/100.0d0)
+        nK0we74 = tmp + s*(0.023517d0 - 0.00023656d0*tk0 + 0.0047036e-4_r8*tk0*tk0)
         K0(i) = EXP(nK0we74)
 
 !       K1 = [H][HCO3]/[H2CO3]
@@ -333,7 +374,6 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !         Mehrbach et al. (1973) refit, by Lueker et al. (2000) (total pH scale)
           K1(i) = 10.0d0**(-1.0d0*(3633.86d0*invtk - 61.2172d0 + 9.6777d0*dlogtk  &
                   - 0.011555d0*s + 0.0001152d0*s2))
-
           K2(i) = 10.0d0**(-1*(471.78d0*invtk + 25.9290d0 - 3.16967d0*dlogtk      &
                   - 0.01781d0*s + 0.0001122d0*s2))
         ELSEIF (trim(opK1K2) == 'm10') THEN
@@ -469,6 +509,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
                  + (-0.77712d0 + 0.0028426d0*tk + 178.34d0/tk)*sqrts  &
                  -0.07711d0*s + 0.0041249d0*s15 )
 
+
 !       Kspa (aragonite) - apparent solubility product of aragonite
 !       (no scale)
 !       Kspa = [Ca2+] [CO32-] when soln is in equilibrium w/ aragonite
@@ -479,11 +520,9 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
              -0.10018d0*s + 0.0059415d0*s15 )
 
 !       Pressure effect on K0 based on Weiss (1974, equation 5)
-        Phydro_atm = prb / 1.01325  ! convert hydrostatic pressure from bar to atm (1.01325 bar / atm)
-        Ptot = Patmd + Phydro_atm   ! total pressure (in atm) = atmospheric pressure + hydrostatic pressure
         Rgas_atm = 82.05736_r8      ! (cm3 * atm) / (mol * K)  CODATA (2006)
         vbarCO2 = 32.3_r8           ! partial molal volume (cm3 / mol) from Weiss (1974, Appendix, paragraph 3)
-        K0(i) = K0(i) * exp( ((1-Ptot)*vbarCO2)/(Rgas_atm*TK) )   ! Weiss (1974, equation 5)
+        K0(i) = K0(i) * exp( ((1-Ptot)*vbarCO2)/(Rgas_atm*tk0) )   ! Weiss (1974, equation 5)
 
 !       Pressure effect on all other K's (based on Millero, (1995)
 !           index: K1(1), K2(2), Kb(3), Kw(4), Ks(5), Kf(6), Kspc(7), Kspa(8),
@@ -509,7 +548,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         Kf(i) = Kf_0p * EXP(lnkpok0(6)) !Pressure correction (on Free scale)
         Kf(i) = Kf(i)/total2free        !Convert back from Free to Total scale
 
-!       Convert between seawater and total scales
+!       Convert between seawater and total hydrogen (pH) scales
         free2SWS  = 1.d0 + St(i)/Ks(i) + Ft(i)/(Kf(i)*total2free)  ! using Kf on free scale
         total2SWS = total2free * free2SWS                          ! KSWS = Ktotal*total2SWS
         SWS2total = 1.d0 / total2SWS
@@ -528,15 +567,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         Kb(i)  = Kb(i)*total2SWS_0p
 
 !       Already on SEAWATER scale: K1p, K2p, K3p, Kb, Ksi, Kw
-!       K1p(i) = K1p(i)*total2SWS_0p 
-!       K2p(i) = K2p(i)*total2SWS_0p
-!       K3p(i) = K3p(i)*total2SWS_0p
-!       Ksi(i) = Ksi(i)*total2SWS_0p
-!       Kw(i)  = Kw(i)*total2SWS_0p
 
-!       Keep other contants on same scale:
-!          - Ks (already on Free scale)
-!          - Kspc, Kspa (no scale)
+!       Other contants (keep on another scale):
+!          - K0         (independent of pH scale, already pressure corrected)
+!          - Ks         (already on Free scale;   already pressure corrected)
+!          - Kf         (already on Total scale;  already pressure corrected)
+!          - Kspc, Kspa (independent of pH scale; pressure-corrected below)
 
 !       Perform actual pressure correction (on seawater scale)
         K1(i)   = K1(i)*EXP(lnkpok0(1))
@@ -551,14 +587,14 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         Ksi(i)  = Ksi(i)*EXP(lnkpok0(12))
 
 !       Convert back to original total scale:
-        K1(i)  = K1(i)*SWS2total
-        K2(i)  = K2(i)*SWS2total
+        K1(i)  = K1(i) *SWS2total
+        K2(i)  = K2(i) *SWS2total
         K1p(i) = K1p(i)*SWS2total
         K2p(i) = K2p(i)*SWS2total
         K3p(i) = K3p(i)*SWS2total
-        Kb(i)  = Kb(i)*SWS2total
+        Kb(i)  = Kb(i) *SWS2total
         Ksi(i) = Ksi(i)*SWS2total
-        Kw(i)  = Kw(i)*SWS2total
+        Kw(i)  = Kw(i) *SWS2total
 
      ELSE
 
