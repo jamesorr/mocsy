@@ -47,7 +47,7 @@ SUBROUTINE p2fCO2(pCO2, temp, Patm, p, N, fCO2)
      Rgas_atm = 82.05736_r8            !R in (cm3 * atm) / (mol * K)  from CODATA (2006)
 !    To compute fugcoeff, we need 3 other terms (B, Del, xc2) as well as 3 others above (tk, Ptot, Rgas_atm)
      B = -1636.75d0 + 12.0408d0*tk - 0.0327957d0*(tk*tk) + 0.0000316528d0*(tk*tk*tk)
-     Del = 57.7d0 - 0.118*tk
+     Del = 57.7d0 - 0.118d0*tk
 !    "x2" term often neglected (assumed = 1) in applications of Weiss's (1974) equation 9
 !    x2 = 1 - x1 = 1 - xCO2 (it is very close to 1, but not quite)
 !    Let's assume that xCO2 = pCO2. Resulting fugcoeff is identical to 8th digit after the decimal.
