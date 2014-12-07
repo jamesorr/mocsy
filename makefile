@@ -75,8 +75,6 @@ OBJS =  singledouble.o \
 
 EXEC = test_mocsy
 
-EXEC2 = test_mocsy2
-
 library = libmocsy.a
 #---------------------------------------------------------------------------
 
@@ -101,14 +99,6 @@ $(library):  $(OBJS)
 #$(EXEC): $(TOBJS) $(library)
 #	$(FC) $(FCFLAGS) -o $(EXEC) $(TOBJS) 
 $(EXEC): $(OBJS) $(library) 
-	$(FC) $(FCFLAGS) -o $@ $@.f90 $(LDFLAGS)
-
-# Build the Fortran program executable that tests the mocsy library (test_mocsy)
-#$(EXEC2): $(TOBJS2) $(library)
-#	$(FC) $(FCFLAGS) -o $(EXEC2) $(TOBJS2) 
-#$(EXEC2): $(OBJS) $(library) $(EXEC2).o
-#	$(FC) $(FCFLAGS) -o $(EXEC2) $(EXEC2).o $(LDFLAGS)
-$(EXEC2): $(OBJS) $(library) 
 	$(FC) $(FCFLAGS) -o $@ $@.f90 $(LDFLAGS)
 
 # Build the shared object file for python
