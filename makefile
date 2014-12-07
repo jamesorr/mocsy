@@ -24,7 +24,7 @@ LDFLAGS = -L./ -lmocsy
 INCLUDEFLAGS = -I/usr/local/include .
 
 # List of executables to be built within the package
-PROGRAMS = libmocsy.a test_mocsy test_mocsy2 mocsy.so
+PROGRAMS = libmocsy.a test_mocsy mocsy.so
 
 # "make" builds all
 all: $(PROGRAMS)
