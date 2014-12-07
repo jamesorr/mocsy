@@ -6,7 +6,7 @@ CONTAINS
 SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                                    &
                   ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                   temp, sal, alk, dic, sil, phos, kw660, xco2, Patm, dz1, N,                &
-                  optCON, optT, optP, optB, optK1K2, optKf                                  )
+                  optCON, optT, optP, optB, optK1K2, optKf, optGAS                          )
 
   !   Purpose:
   !     Computes air-sea CO2 flux & surface ocean carbonate system vars (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)
@@ -68,6 +68,17 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !       -> 'pf' means use Perez & Fraga (1987) formulation for Kf (recommended by Dickson et al., 2007)
   !               **** BUT Valid for  9 < T < 33°C and 10 < S < 40.
   !       -> 'dg' means use Dickson & Riley (1979) formulation for Kf (recommended by Dickson & Goyet, 1994)
+  !     -----------
+  !     optGAS: choose in situ vs. potential fCO2 and pCO2
+  !     ---------
+  !       PRESSURE corrections for K0 and the fugacity coefficient (Cf) 
+  !       -> 'Pzero'   = 'zero order' fCO2 and pCO2 (typical approach, which is flawed)
+  !                      considers in situ T & only atm pressure (hydrostatic=0)
+  !       -> 'Ppot'    = 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
+  !                      considers potential T & only atm pressure (hydrostatic press = 0)
+  !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
+  !                      considers in situ T & total pressure (atm + hydrostatic)
+  !     ---------
 
   !     OUTPUT variables:
   !     =================
@@ -141,6 +152,12 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
 !f2py character*3 optional, intent(in) :: optK1K2='l'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
+  !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
+  !! 'Ppot'    - for 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
+  !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
+  !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
+!f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
+  CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
 
 ! Output variables:
   !> air-to-sea CO2 flux <b>[mol/(m^2 * s)]</b>
@@ -190,6 +207,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   CHARACTER(3) :: opB
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
+  CHARACTER(7) :: opGAS
 
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -231,13 +249,18 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 !   Default is Lueker et al. 2000) for K1 & K2
     opK1K2 = 'l'
   ENDIF
+  IF (PRESENT(optGAS)) THEN
+    opGAS = optGAS
+  ELSE
+    opGAS = 'Pinsitu'
+  ENDIF
 
   depth0 = fco2 * 0.0
   lat0   = depth0
 ! Compute derived variables from input (DIC, ALK, ...)
   CALL vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
-            temp, sal, alk, dic, sil, phos, Patm, depth0, lat0, N,                        &
-            opCON, opT, opP, opB, opK1K2, opKf                                        )
+            temp, sal, alk, dic, sil, phos, Patm, depth0, lat0, N,                    &
+            opCON, opT, opP, opB, opK1K2, opKf, opGAS                                 )
 
 ! Compute pCO2atm [uatm] from xCO2 [ppm], atmospheric pressure [atm], & vapor pressure of seawater
 ! pCO2atm = (Patm - pH20(i)) * xCO2,   where pH20 is the vapor pressure of seawater [atm]
