@@ -1,4 +1,4 @@
-/*! \mainpage Routines to model the ocean carbonate system (mocsy v1.0)
+/*! \mainpage Routines to model the ocean carbonate system (mocsy v2.0)
 
 Details of individual routines are available under the "Files" tab
 above, while the overall description, implementation and use of
