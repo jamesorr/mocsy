@@ -3,7 +3,7 @@
 MODULE mdepth2press
 CONTAINS
 !>     Compute pressure [db] from depth [m] & latitude [degrees north].
-!!     This subroutine is needed because p80 is a function (cannot accept arrays)
+!!     This subroutine is needed because p80 is a function (using scalars not arrays)
 SUBROUTINE depth2press(depth, lat, pdbar, N)
 
   !     Purpose:

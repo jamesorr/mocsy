@@ -2,7 +2,7 @@
 MODULE mrhoinsitu
 CONTAINS
 !>     Compute in situ density from salinity (psu), in situ temperature (C), & pressure (db).
-!!     This subroutine is needed because rho is a function (cannot accept arrays)
+!!     This subroutine is needed because rho is a function (using scalars not arrays)
 SUBROUTINE rhoinsitu(salt, tempis, pdbar, N, rhois)
 
   !     Purpose:

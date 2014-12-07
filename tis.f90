@@ -2,7 +2,7 @@
 MODULE mtis
 CONTAINS
 !>    Compute in situ temperature from arrays of potential temp, salinity, and pressure.
-!!    This subroutine is needed because sw_temp is a function (cannot accept arrays)
+!!    This subroutine is needed because sw_temp is a function (using scalars not arrays)
 SUBROUTINE tis(salt, tempot, press, pressref, N, tempis)
   !    Purpose:
   !    Compute in situ temperature from arrays of in situ temp, salinity, and pressure.

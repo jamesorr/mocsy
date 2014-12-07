@@ -2,7 +2,7 @@
 MODULE mtpot
 CONTAINS
 !>    Compute potential temperature from arrays of in situ temp, salinity, and pressure.
-!!    This subroutine is needed because sw_ptmp is a function (cannot accept arrays)
+!!    This subroutine is needed because sw_ptmp is a function (using scalars not arrays)
 SUBROUTINE tpot(salt, tempis, press, pressref, N, tempot)
   !    Purpose:
   !    Compute potential temperature from arrays of in situ temp, salinity, and pressure.
