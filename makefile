@@ -44,10 +44,7 @@ SOURCES = singledouble.f90 \
           depth2press.f90 \
           constants.f90 \
           varsolver.f90 \
-          vars_rho1028.f90 \
-          vars_rho1000.f90 \
           vars.f90 \
-          vars2.f90 \
           p2fCO2.f90 \
           f2pCO2.f90 \
           gasx.f90 
@@ -65,10 +62,7 @@ OBJS =  singledouble.o \
         depth2press.o \
         constants.o \
         varsolver.o \
-        vars_rho1028.o \
-        vars_rho1000.o \
         vars.o \
-        vars2.o \
         p2fCO2.o \
         f2pCO2.o \
         gasx.o
