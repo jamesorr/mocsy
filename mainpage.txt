@@ -1,6 +1,6 @@
 /*! \mainpage Routines to model the ocean carbonate system (mocsy v1.0)
 
-Details of individual routines are available under the "Modules" tab
+Details of individual routines are available under the "Files" tab
 above, while the overall description, implementation and use of
 <em>mocsy</em> is described below.
 
@@ -178,7 +178,7 @@ Comparison of the 2 tables reveal in part differences due to avoiding
 the 3 approximations that are commonly used in model calculations of
 the ocean carbonate system. For details on the specific options, see
 the program <em>test_mocsy.f90</em> as well as the documentation of
-routines under the "Modules" tab.
+routines under the "Files" tab.
 
 \section args Calling the main routine
 
@@ -195,16 +195,16 @@ call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempi
 where arguments on the 1st line are output variables, those on the 2nd
 line are input variables, and those on the 3rd line are input
 options. Extensive documentation on the arguments, units, and options, 
-is accessible by clicking on the "Modules" tab and then on
+is accessible by clicking on the "Data Types List" tab and then on
 "mvars" (the module that contains the <em>vars</em> routine). The
 options above would be the common choice for typical ocean models (see
 also <em>test_mocsy.f90</em> for typical options used with
 observations.
 
-Other <em>mocsy</em> routines are available 
-to output the entire set of equilibrium constants (constants.f90), 
+Other <em>mocsy</em> routines are available, for example 
+to get the entire set of equilibrium constants (constants.f90), 
 to convert between potential and in-situ temperature (tpot.f90 and tis.f90) , 
-to convert between depth and pressure (depth2press.f90), and 
+to convert between depth and pressure (depth2press.f90), 
 to compute in situ density (rhoinsitu.f90),
 to convert between fCO2 and pCO2 (f2pCO2.f90 and p2fCO2.f90), and
 to compute atmospheric pCO2 and xCO2 as well as air-sea CO2 fluxes (gasx.f90)
@@ -294,7 +294,7 @@ but that is usually unnecessary. Typically the documentation is
 identical because there is but 1 routine per module, except for the
 <em>gasx</em> routine.  More extensive documentation (on arguments,
 units, options, etc.) is available in this manual by clicking on the
-Modules tab and then the name of the module. The routines in python
+"Data File Types" tab and then the name of the module. The routines in python
 have the same names as in Fortran. The module names are the routine
 names preceded by a "m" (except for the gasx module, which contains
 several routines).
@@ -513,7 +513,7 @@ practices for ocean CO2 measurements, PICES Special Publication 3,
 IOCCP Report No. 8, http:// aquaticcommons.org/1443/, 2007.
 
 Frankignoulle, M.: A complete set of buffer factors for acid/base CO2
-system in seawater, <em>J.  Mar. Sys., 5,<em> 111–118, 1994.
+system in seawater, <em>J.  Mar. Sys., 5,</em> 111–118, 1994.
 
 Garcia, H. E., Locarnini, R. A., Boyer, T. P., Antonov, J. I., Zweng,
 M. M., Baranova, O. K., and Johnson, D. R.: World Ocean Atlas 2009,
