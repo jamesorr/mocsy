@@ -20,7 +20,7 @@ above, while the overall description, implementation and use of
 carbonate system variables from DIC and total Alk, particularly from
 models.  It updates previous OCMIP code, avoids 3 common model
 approximations, and offers the best-practice constants as well as more
-recent options. Its results agree with those from CO2SYS within 0.005%.
+recent options. Its results agree with those from CO2SYS-MATLAB within 0.005%.
 
 */
 
@@ -40,13 +40,15 @@ recent options. Its results agree with those from CO2SYS within 0.005%.
 
 The <em>mocsy</em> package is designed to accurately and efficiently
 compute all carbonate system variables given input for dissolved
-inorganic carbon (DIC), total alkalinity (Alk), temperature, salinity,
-phosphate, and silica concentrations. By default, the thermodynamic
+inorganic carbon (DIC), total alkalinity (Alk), temperature, and
+salinity as well as concentrations of total dissolved inorganic
+phosphorus and silicon concentrations. By default, the thermodynamic
 equilibrium constants used in <em>mocsy</em> are those recommended by
 the Best-Practices Guide (Dickson et al., 2007). <em>mocsy</em> also
 includes options to use more recent formulations for the constants
 \f$K_1\f$ and \f$K_2\f$ from (Millero, 2010) and for total boron
-concentrations as a function of salinity (Lee et al., 2010).
+concentrations as a function of salinity (Lee et al., 2010), although
+these are not recommended at this time (Orr and Epitalon, 2015).
 
 <em>mocsy</em> is designed for users with programming experience,
 preferably in either Fortran or python; others may well prefer the
@@ -64,16 +66,16 @@ by calculating the 3 exact quantities from other input
 variables. These approximations lead to significant errors in computed
 variables in the deep ocean (Orr and Epitalon, 2014).
 
-With input from 3-D gridded data products, namely GLODAP's DIC and Alk
-(Key et al., 2004) and World Ocean Atlas (2009) fields for T, S, and
-nutrients (Antonov et al., 2010; Loocarnini et al., 2010; Garcia et
-al., 2010), output from <em>mocsy</em> matches that from CO2sys,
-generally within 0.005% (Orr and Epitalon, 2014). Disagreement is
-slightly larger only for computed \f$\Omega_C\f$ (up to 0.07%),
-\f$\Omega_A\f$ (up to 0.13%), and the Revelle factor <em>R</em> (up to
-0.7% in surface waters). The latter stems from the numerical approach
-implemented in CO2sys for <em>R</em> versus the analytical approach
-(Frankignoulle, 1994) adopted in <em>mocsy</em>.
+With none of the approximations, input from 3-D gridded data products,
+namely GLODAP's DIC and Alk (Key et al., 2004) and World Ocean Atlas
+(2009) fields for T, S, and nutrients (Antonov et al., 2010;
+Loocarnini et al., 2010; Garcia et al., 2010), output from
+<em>mocsy</em> agrees with that from CO2SYS-MATLAB (van Heuven et al.,
+2011), within 0.005% for the three inorganic carbon
+species. Corresponding pH differences are less than 0.00002, while
+differences between packages for \f$\Omega_C\f$ and \f$\Omega_A\f$ are
+offset by constant 0.018%. These small differences and their causes
+are discussed in Orr and Epitalon (2014).
 
 */
 
@@ -82,13 +84,13 @@ implemented in CO2sys for <em>R</em> versus the analytical approach
 /*! \page fort The <em>mocsy</em> Fortran code
 
 The fortran code for <em>mocsy</em> is available as a series of
-Fortran 90 routines: vars.f90, constants.f90, depth2press.f90,
-p80.f90, rho.f90, rhoinsitu.f90, sw_adtg.f90, sw_ptmp.f90,
-sw_temp.f90, test_mocsy.f90, tis.f90, and tpot.f90. Most users will
-simply call vars.f90, which calls other routines.
-
-Extensive documentation and the code listing for each of these
-routines is accessible by clicking on their links above.
+Fortran 95 routines: vars.f90, constants.f90, depth2press.f90,
+f2pCO2.f90, gasx.f90, p2fCO2.f90, p80.f90, phsolvers.f90, rho.f90,
+rhoinsitu.f90 , sw_adtg.f90, sw_ptmp.f90, sw_temp.f90, test_mocsy.f90,
+tis.f90, tpot.f90, and varsolver.f90. Most users will simply call
+vars.f90, which calls other routines.  Extensive documentation and the
+code listing for each of these routines is accessible by clicking on
+their links above.
 
 \section download Download it
 
@@ -144,12 +146,12 @@ Table 1: Typical MODEL output
   pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature
 (total) (uatm) (uatm)  (mol/m3)    (mol/m3)    (mol/m3)                        (kg/m3) (db)      (C)
 ---------------------------------------------------------------------------------------------------------
- 8.0587  374.2  372.6  0.2230E-01  0.2080E+01  0.1057E+00   1.55   2.46  14.53 1027.97    0.0   2.000
- 8.0165  367.9  366.3  0.2197E-01  0.2083E+01  0.1033E+00   1.24   1.94  14.58 1032.68 1012.2   2.062
- 7.9738  362.5  360.9  0.2168E-01  0.2085E+01  0.1011E+00   1.00   1.54  14.63 1037.30 2029.1   2.142
- 7.9306  358.0  356.4  0.2143E-01  0.2088E+01  0.9886E-01   0.80   1.23  14.68 1041.83 3050.6   2.240
- 7.8870  354.3  352.8  0.2121E-01  0.2090E+01  0.9672E-01   0.65   0.99  14.72 1046.28 4076.9   2.354
- 7.8430  351.4  349.9  0.2102E-01  0.2092E+01  0.9466E-01   0.53   0.80  14.76 1050.65 5108.0   2.483
+ 8.0592  374.9  373.3  0.2234E-01  0.2086E+01  0.1061E+00   1.55   2.47  14.45 1027.97    0.0   2.000
+ 8.0169  652.3  423.3  0.2201E-01  0.2089E+01  0.1038E+00   1.24   1.95  14.51 1032.68 1012.2   2.062
+ 7.9741 1139.4  481.4  0.2172E-01  0.2091E+01  0.1015E+00   1.00   1.55  14.56 1037.30 2029.1   2.142
+ 7.9308 1997.5  549.1  0.2146E-01  0.2094E+01  0.9926E-01   0.81   1.24  14.61 1041.83 3050.6   2.240
+ 7.8872 3513.6  627.9  0.2124E-01  0.2096E+01  0.9712E-01   0.66   0.99  14.66 1046.28 4076.9   2.354
+ 7.8431 6199.0  720.0  0.2105E-01  0.2098E+01  0.9505E-01   0.54   0.80  14.70 1050.65 5108.0   2.483
 ---------------------------------------------------------------------------------------------------------
 \endverbatim
 
@@ -158,15 +160,15 @@ Table 1: Typical MODEL output
 Table 2: Typical DATA output
 ---------------------------------------------------------------------------------------------------------
                                                                                in situ         in situ
-t  pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature
+  pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature
 (total) (uatm) (uatm)  (mol/kg)    (mol/kg)     (mol/kg)                       (kg/m3) (db)      (C)
 ---------------------------------------------------------------------------------------------------------
- 8.0591  374.9  373.3  0.2174E-04  0.2029E-02  0.1032E-03   1.55   2.47  14.53 1028.11    0.0   2.000
- 8.0191  368.7  367.1  0.2137E-04  0.2032E-02  0.1011E-03   1.25   1.97  14.59 1032.82 1000.0   2.000
- 7.9790  363.0  361.5  0.2105E-04  0.2034E-02  0.9901E-04   1.02   1.58  14.66 1037.43 2000.0   2.000
- 7.9389  357.9  356.4  0.2075E-04  0.2036E-02  0.9700E-04   0.83   1.27  14.71 1041.94 3000.0   2.000
- 7.8987  353.3  351.8  0.2048E-04  0.2038E-02  0.9505E-04   0.68   1.03  14.77 1046.36 4000.0   2.000
- 7.8586  349.2  347.8  0.2025E-04  0.2041E-02  0.9317E-04   0.56   0.83  14.82 1050.68 5000.0   2.000
+ 8.0546  382.8  381.1  0.2219E-04  0.2028E-02  0.1042E-03   1.57   2.49  14.38 1027.97    0.0   2.000
+ 8.0146  661.8  431.5  0.2182E-04  0.2030E-02  0.1021E-03   1.27   1.99  14.45 1032.63 1000.0   2.000
+ 7.9746 1145.7  489.3  0.2148E-04  0.2033E-02  0.9998E-04   1.03   1.59  14.51 1037.19 2000.0   2.000
+ 7.9345 1986.2  555.5  0.2117E-04  0.2035E-02  0.9797E-04   0.84   1.28  14.57 1041.65 3000.0   2.000
+ 7.8944 3448.2  631.4  0.2090E-04  0.2037E-02  0.9602E-04   0.69   1.04  14.62 1046.02 4000.0   2.000
+ 7.8544 5994.4  718.7  0.2066E-04  0.2039E-02  0.9414E-04   0.56   0.84  14.68 1050.29 5000.0   2.000
 ---------------------------------------------------------------------------------------------------------
 *Table 2 differs slightly from Table 1 because input DIC, Alk, pressure, and temperature differ.
 *Concentration units differ between Tables 1 and 2 because input options differ
@@ -185,9 +187,9 @@ computes all carbonate system variables by calling the <em>vars</em>
 routine
 
 \verbatim
-call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,    &  ! OUTPUT
-          temp, sal, alk, dic, sil, phos, depth, lat, N,                              &  ! INPUT
-          optCON='mol/m3', optT='Tpot', optP='m', optB='u74', optK1K2='l', optKf='dg' )  ! INPUT OPTIONS
+call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,                  &  ! OUTPUT
+          temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                                      &  ! INPUT
+          optCON='mol/m3', optT='Tpot', optP='m', optB='u74', optK1K2='l', optKf='dg', optGAS='Ppot')  ! INPUT OPTIONS
 \endverbatim
 
 where arguments on the 1st line are output variables, those on the 2nd
@@ -201,9 +203,11 @@ observations.
 
 Other <em>mocsy</em> routines are available 
 to output the entire set of equilibrium constants (constants.f90), 
-to convert between potential in in-situ temperature (tpot.f90 and tis.f90) , 
+to convert between potential and in-situ temperature (tpot.f90 and tis.f90) , 
 to convert between depth and pressure (depth2press.f90), and 
-to compute in situ density (rhoinsitu.f90).
+to compute in situ density (rhoinsitu.f90),
+to convert between fCO2 and pCO2 (f2pCO2.f90 and p2fCO2.f90), and
+to compute atmospheric pCO2 and xCO2 as well as air-sea CO2 fluxes (gasx.f90)
 
 The <em>mocsy</em> Fortran 95 routines can also be called from
 <em>python</em> as described in the next section.
@@ -225,12 +229,12 @@ with R using <em>rpy2</em>.
 \section shareobj Make it useable
 
 The first step, before importing mocsy in python, is to make a shared
-object module <em>mocsy.so</em> using the utility <em>f2py</em>.  For
-this fortran-to-python lilbrary converter is part of the python's
-widely used NumPy library. Secondly, you will need a Fortran 95
-compiler (e.g., GNU's gfortran).  With both <em>NumPy</em> and
-gfortran installed, just go to the directory where you downloaded the
-mocsy routines, and type
+object module <em>mocsy.so</em> using the utility <em>f2py</em>.  This
+fortran-to-python lilbrary converter is part of the python's widely
+used NumPy library. Secondly, you will need a Fortran 95 compiler
+(e.g., GNU's gfortran).  With both <em>NumPy</em> and gfortran
+installed, just go to the directory where you downloaded the mocsy
+routines, and type
 
 \verbatim 
 make mocsy.so
@@ -248,7 +252,7 @@ f2py -c --help-fcompiler
 If <em>--fcompiler=gnu95</em> does not show up just under the line
 "Fortram compilers found:", then try again to reinstall it.
 Otherwise, if you already have another Fortran 95 compiler installed,
-try to edit the <em>makefile</em> and change the name of the
+simply edit the <em>makefile</em> and change the name of the
 FC and F90 variables, accordingly. In addition, change the
 corresponding part of the last line <em>--fcompiler=gnu95</em> to the
 name of your compiler, as listed under the "Fortran compilers found:"
@@ -286,12 +290,14 @@ One could in addition add the name of the "routine", e.g.,
 print mocsy.mvars.vars__doc__
 \endverbatim
 
-but that is unnecessary because the documentation is identical (there
-is but 1 routine per module).  More extensive documentation (on
-arguments, units, options, etc.) is available in this manual by
-clicking on the Modules tab and then the name of the module. The
-routines in python have the same names as in Fortran. The module names
-are the routine names preceded by a "m".
+but that is usually unnecessary. Typically the documentation is
+identical because there is but 1 routine per module, except for the
+<em>gasx</em> routine.  More extensive documentation (on arguments,
+units, options, etc.) is available in this manual by clicking on the
+Modules tab and then the name of the module. The routines in python
+have the same names as in Fortran. The module names are the routine
+names preceded by a "m" (except for the gasx module, which contains
+several routines).
 
 \section use Use it
 
@@ -299,7 +305,7 @@ As an example, here is the call in python of the main routine <em>vars</em>
 
 \verbatim
     pH, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, DENis, p, Tis = (
-    mocsy.mvars (t, s, alk, dic, sio2, po4, depth, lat, optcon='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
+    mocsy.mvars (t, s, alk, dic, sio2, po4, Patm, depth, lat, optcon='mol/kg', optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg", optGAS="Ppot")
     )
 \endverbatim
 
@@ -324,23 +330,46 @@ the user.  For example, to get the equilibrium constants that were
 used in the above call to <em>mocsy.mvars</em>, the command is
 
 \verbatim
-    Kh, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi, St, Ft, Bt = mocsy.mconstants (t, s, depth, lat, optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg")
+    Kh, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi, St, Ft, Bt = mocsy.mconstants (t, s, Patm, depth, lat, optt='Tinsitu', optp='m', optb="u74", optk1k2='l', optkf="dg", optGAS="Ppot")
 \endverbatim
 
-And four other routines are available to compute pressure, in-situ density, potential temperature, and in-situ temperature:
+Other routines are available to compute pressure, in-situ density,
+potential temperature, and in-situ temperature as well as to convert
+between pCO2, fCO2 and xCO2.
 
 \verbatim
 # Compute pressure (db) from depth (m) and latitude (degrees north) following Saunders (1981)
 pfd = mocsy.mdepth2press(depth,lat)   
 
-# Compute in situ density (kg/m3) from salinity (psu), in-situ temp (C), and pressure (db)
+# Compute in situ density (kg/m3) from salinity (psu), in-situ temp (C), and hydrostatic pressure (db)
 rhois = mocsy.mrhoinsitu(s, t, pfd)  
 
-# Compute potential temperature (C) from salinity (psu), in situ temperature (C), and pressure (db)
+# Compute potential temperature (C) from salinity (psu), in situ temperature (C), and hydrostatic pressure (db)
 Tpot = mocsy.mtpot(s, Tis, pfd, 0)     
 
-# Compute in situ temperature (C) from salinity (psu), potential temperature (C), and pressure (db)
-Tis = mocsy.mtis(s, Tpot, pfd, 0)     
+# Compute in situ temperature (C) from salinity (psu), potential temperature (C), and hydrostatic pressure (db)
+Tis = mocsy.mtis(s, Tpot, pfd, 0)
+
+# Compute oceanic pCO2 (uatm) from arrays of fCO2 (uatm), in situ temp (C), atm pressure (atm), & hydrostatic pressure (db)
+pCO2 = mocsy.mf2pCO2(fCO2, temp, Patm, p)
+
+# Compute oceanic fCO2 (uatm) from arrays of pCO2 (uatm), in situ temp (C), atm pressure (atm), & hydrostatic pressure (db)
+fCO2 = mocsy.mp2fCO2(pCO2, temp, Patm, p)
+
+# Compute atmospheric xCO2 (ppm) from arrays of atmospheric pCO2 (uatm), surface ocean T (C), S (psu), & atm pressure (atm)
+xCO2atm = mocsy.mgasx.pCO2atm2xCO2(pCO2atm, temp, salt, Patm)
+
+# Compute atmospheric pCO2 (uatm) from arrays of atmospheric xCO2 (ppm), surface ocean T (C), S (psu), & atm pressure (atm)
+pCO2atm = mocsy.mgasx.x2pCO2atm(xCO2, temp, salt, Patm)
+
+# Compute vapor pressure of seawater (atm) following procedure from Weiss & Price (1980)
+vpsw = mocsy.mgasx.vapress(temp, salt)
+
+# Computes air-sea CO2 flux & surface-ocean carbonate system vars (see mocsy doc & OCMIP2 Abiotic HOWTO)
+co2flux,co2ex,dpco2,ph,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,rhoSW,p,tempis = \
+mocsy.mgasx.flxco2(temp, sal, alk, dic, sil, phos, kw660, xco2, Patm, dz1,         \
+optCON, optT, optP, optB, optK1K2, optKf, optGAS)
+
 \endverbatim
 
 \section examples Examples
@@ -354,7 +383,7 @@ DIC and ALk in mol/kg, in situ temperature, pressure.
 $ python
 import mocsy
 pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = \
-mocsy.mvars (temp=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg")
+mocsy.mvars (temp=18, sal=35, alk=2300.e-6, dic=2000.e-6, sil=0, phos=0, patm=1., depth=100, lat=0, optcon='mol/kg', optt='Tinsitu', optp='db', optb="u74", optk1k2='l', optkf="dg", optgas='Pinsitu')
 \endverbatim
 
 Compute the CONSTANTS with the same scalar input for S, T, and P (as above) but
@@ -364,16 +393,16 @@ Lee et al. (2010) for total boron and Millero (2010) for \f$K_1\f$ and
 
 \verbatim
 Kh,K1,K2,Kb,Kw,Ks,Kf,Kspc,Kspa,K1p,K2p,K3p,Ksi,St,Ft,Bt = \
-mocsy.mconstants (temp=18.,sal=35.,depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg")
+mocsy.mconstants (temp=18.,sal=35., patm=1., depth=0.,lat=0., optt='Tinsitu', optp='m', optb="l10", optk1k2='m10', optkf="dg", optgas='Ppot')
 \endverbatim
  
 For MODEL input:
 DIC and Alk in <em>mol/m3</em>, potential temperature, and depth. 
-Also do NOT specify last 3 options, thus using defaults (optb="l10", optk1k2='l', optkf="pf").
+Also do NOT specify last 4 options, thus using defaults (optb='l10', optk1k2='l', optkf='pf', optgas='Pinsitu').
 
 \verbatim
 pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = \
-mocsy.mvars (temp=18, sal=35, alk=2300*1028e-6, dic=2000*1028e-6, sil=0, phos=0, depth=100, lat=0, optcon='mol/m3', optt='Tpot', optp='m')
+mocsy.mvars (temp=18, sal=35, alk=2300*1028e-6, dic=2000*1028e-6, sil=0, phos=0, patm=1, depth=100, lat=0, optcon='mol/m3', optt='Tpot', optp='m')
 \endverbatim
 
 2) Simple arrays (numpy):
@@ -413,7 +442,7 @@ alk = alk * rhois * 1e-6
 
 # Compute carbonate system variables, using 'model' options
 pH,pco2,fco2,co2,hco3,co3,OmegaA,OmegaC,BetaD,DENis,p,Tis = \
-mocsy.mvars (temp=temp, sal=sal, alk=alk, dic=dic, sil=sio2, phos=po4, depth=depth, lat=lat, optcon='mol/m3', optt='Tpot', optp='m')
+mocsy.mvars (temp=temp, sal=sal, alk=alk, dic=dic, sil=sio2, phos=po4, patm=1, depth=depth, lat=lat, optcon='mol/m3', optt='Tpot', optp='m')
 
 # Print out depth and carbonate ion concentration (converted to umol/kg)
 print depth, co3 / (DENis * 1e-6)
@@ -492,6 +521,10 @@ Volume 4: Nutrients (phosphate, nitrate, silicate), S. Levitus, ed.,
 Atlas NESDIS 71, NOAA, U.S. Government Printing Office,Washington,
 D.C., 398 pp., 2010.
 
+Lewis, E. and Wallace, D. W. R.: Program Developed for CO2 System
+Calculations, ORNL/CDIAC- 15 105, Carbon Dioxide Inf. Anal. Cent., Oak
+Ridge Natl. Lab., Oak Ridge, Tenn., 38 pp., 1998.
+
 Lee, K., Kim, T.-W., Byrne, R. H., Millero, F. J., Feely, R. a., and
 Liu, Y.- M.: The universal ratio of boron to chlorinity for the North
 Pacific and North Atlantic oceans, <em>Geochimica et Cosmochimica Acta,
@@ -505,13 +538,20 @@ U.S. Government Printing Office, Washington, D.C., 184 pp., 2010.
 Millero, F. J.: Carbonate constants for estuarine waters, <em>Marine and
 Freshwater Research, 61</em>, 139--142, 2010.
 
-Orr, J.C., J.-M. Epitalon, and J.-P. Gattuso: Comparison of seven packages 
-that compute ocean carbonate chemistry <em>Biogeosciences</em>, submitted, 2014.
+Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean
+ carbonate system: mocsy 1.0, <em>Geosci. Model Dev. Disc., 7,</em>
+ 2877–2902, doi:10.5194/gmdd–7–2877–2014, 2014.
 
-Orr, J.C. and J.-M. Epitalon: Improved routines to model the ocean 
-carbonate system: mocsy 1.0, <em>Geoscientific Model Development,</em> submitted, 2014.
+Orr, J. C., Epitalon, J.-M., and Gattuso, J.-P.: Comparison of seven
+packages that compute ocean carbonate chemistry, <em>Biogeosciences
+Discuss., 11,</em> 5327–5397, doi:10.5194/bgd-11-5327-2014, 2014.
 
 Saunders, P: Practical conversion of pressure to depth,
 <em>J. Phys. Oceanogr., 11</em>, 573-574, 1981.
+
+van Heuven, S., Pierrot, D., Rae, J. W. B., Lewis, E., and Wallace,
+D. W. R.: MATLAB Program Developed for CO2 System Calculations,
+ORNL/CDIAC-105b, Carbon Dioxide Inf. Anal. Cent., Oak Ridge
+Natl. Lab., Oak Ridge, Tenn., 2011.
 
 */
