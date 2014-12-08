@@ -1,3 +1,5 @@
+!> \file tpot.f90
+!! \BRIEF 
 !>    Module with tpot subroutine - compute potential T from in situ T,S,P
 MODULE mtpot
 CONTAINS

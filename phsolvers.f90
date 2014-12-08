@@ -1,3 +1,6 @@
+!> \file phsolvers.f90
+!! \BRIEF 
+!> Module with routines needed to solve pH-total alkalinity equation (Munhoven, 2013, GMD)
 MODULE mphsolvers
 !   Module of fastest solvers from Munhoven (2013, Geosci. Model Dev., 6, 1367-1388)
 !   ! Taken from SolveSAPHE (mod_phsolvers.F90) & adapted very slightly for use with mocsy

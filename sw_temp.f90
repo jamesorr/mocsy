@@ -1,3 +1,5 @@
+!> \file sw_temp.f90
+!! \BRIEF 
 !> Module with sw_temp function - compute in-situ T from potential T
 MODULE msw_temp
 CONTAINS

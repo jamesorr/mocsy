@@ -1,4 +1,6 @@
-!> Module with routines needed to compute gas exchange (flxco2, scco2, ...
+!> \file gasx.f90
+!! \BRIEF 
+!> Module with routines needed to compute gas exchange (flxco2, scco2, atmospheric xCO2 and pCO2)
 MODULE gasx
 CONTAINS
 !>    Computes air-sea CO2 flux & surface-ocean carbonate system vars (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)

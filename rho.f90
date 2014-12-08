@@ -1,3 +1,5 @@
+!> \file rho.f90
+!! \BRIEF 
 !> Module with rho function - computes in situ density from S, T, P
 MODULE mrho
 CONTAINS

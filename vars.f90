@@ -1,3 +1,5 @@
+!> \file vars.f90
+!! \BRIEF 
 !> Module with vars subroutine - compute carbonate system vars from DIC,Alk,T,S,P,nuts
 MODULE mvars
 CONTAINS

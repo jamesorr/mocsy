@@ -1,3 +1,5 @@
+!> \file f2pCO2.f90
+!! \BRIEF 
 !>    Module with f2pCO2 subroutine - compute pCO2 from fCO2, in situ T, atm pressure, hydrostatic pressure
 MODULE mf2pCO2
 CONTAINS
