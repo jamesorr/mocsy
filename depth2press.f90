@@ -1,4 +1,4 @@
-!> \file mdepth2press.f90
+!> \file depth2press.f90
 !! \BRIEF 
 !> Module with depth2press subroutine - converts depth to pressure
 !! with Saunders (1981) formula
