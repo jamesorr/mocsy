@@ -136,7 +136,7 @@ SUBROUTINE varsolver(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,            
   REAL(kind=r8) :: Phydro_atm, Ptot
   REAL(kind=r8) :: Rgas_atm, B, Del, xCO2approx, xc2, fugcoeff
   REAL(kind=r8) :: tk, tk0
-  real(kind=r8) :: temp68, tempot
+  real(kind=r8) :: temp68, tempot, tempot68
   REAL(kind=r8) :: Hinit, H
   REAL(kind=r8) :: HSO4, HF, HSI, HPO4
   REAL(kind=r8) :: ab, aw, ac
@@ -203,7 +203,8 @@ SUBROUTINE varsolver(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,            
   ELSEIF (trim(opGAS) == 'Ppot' .OR. trim(opGAS) == 'ppot') THEN
      !Use potential temperature and atmospheric pressure (water parcel adiabatically brought back to surface)
      temp68 = (temp - 0.0002d0) / 0.99975d0          !temp = in situ T; temp68 is same converted to ITPS-68 scale
-     tempot = sw_ptmp(salt, temp68, Phydro_bar*10d0, 0.0d0) !potential temperature (C)
+     tempot68 = sw_ptmp(salt, temp68, Phydro_bar*10d0, 0.0d0) !potential temperature (C)
+     tempot   = 0.99975*tempot68 + 0.0002
      tk0 = tempot + 273.15d0  !potential temperature (K) for fugacity coeff. calc as needed for potential fCO2 & pCO2
      Ptot = Patm              !total pressure (in atm) = atmospheric pressure ONLY
   ELSEIF (trim(opGAS) == 'Pinsitu' .OR. trim(opGAS) == 'pinsitu') THEN

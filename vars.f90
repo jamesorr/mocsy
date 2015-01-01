@@ -190,7 +190,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   REAL(kind=r4) :: ssal, salk, sdic, ssil, sphos
 
   REAL(kind=r4) :: tempot, tempis68, tempot68
-  REAL(kind=r8) :: dtempot, drho
+! REAL(kind=r8) :: dtempot, dtempot68
+  REAL(kind=r8) :: drho
 
   REAL(kind=r8) :: K0, K1, K2, Kb, Kw, Ks, Kf, Kspc
   REAL(kind=r8) :: Kspa, K1p, K2p, K3p, Ksi
@@ -311,8 +312,9 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis(i) = temp(i)
-        tempis68 = (temp(i) - 0.0002) / 0.99975
-!       dtempot = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p(i)), 0.0d0)
+        tempis68  = (temp(i) - 0.0002) / 0.99975
+!       dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
+!       dtempot   = 0.99975*dtempot68 + 0.0002
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         PRINT *,"you specified optT =", trim(optT) 
@@ -365,7 +367,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         ENDIF
 
 !       Absolute temperature (Kelvin) & related variables
-        t = DBLE(tempis(i))
+        t  = DBLE(tempis(i))
         tk = 273.15d0 + t
 
 !       Atmospheric pressure

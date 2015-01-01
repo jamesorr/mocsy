@@ -167,7 +167,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=r8) :: total2free_0p, free2SWS_0p, total2SWS_0p
 ! REAL(kind=r8) :: free2SWS, free2SWS_0p
 
-  REAL(kind=r8) :: dtempot
+  REAL(kind=r8) :: dtempot, dtempot68
   REAL(kind=r8) :: R
 
   REAL(kind=r8) :: pK1o, ma1, mb1, mc1, pK1
@@ -282,9 +282,10 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
-        tempis = temp(i)
-        tempis68 = (temp(i) - 0.0002) / 0.99975
-        dtempot = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
+        tempis    = temp(i)
+        tempis68  = (temp(i) - 0.0002) / 0.99975
+        dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
+        dtempot   = 0.99975*dtempot68 + 0.0002
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         PRINT *,"you specified optT =", trim(optT) 
