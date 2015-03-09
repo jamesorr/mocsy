@@ -202,9 +202,11 @@ SUBROUTINE varsolver(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,            
      Ptot = Patm              !total pressure (in atm) = atmospheric pressure ONLY
   ELSEIF (trim(opGAS) == 'Ppot' .OR. trim(opGAS) == 'ppot') THEN
      !Use potential temperature and atmospheric pressure (water parcel adiabatically brought back to surface)
-     temp68 = (temp - 0.0002d0) / 0.99975d0          !temp = in situ T; temp68 is same converted to ITPS-68 scale
-     tempot68 = sw_ptmp(salt, temp68, Phydro_bar*10d0, 0.0d0) !potential temperature (C)
-     tempot   = 0.99975*tempot68 + 0.0002
+     !temp68 = (temp - 0.0002d0) / 0.99975d0          !temp = in situ T; temp68 is same converted to ITPS-68 scale
+     !tempot68 = sw_ptmp(salt, temp68, Phydro_bar*10d0, 0.0d0) !potential temperature (C)
+     !tempot   = 0.99975*tempot68 + 0.0002
+     !tk0 = tempot + 273.15d0  !potential temperature (K) for fugacity coeff. calc as needed for potential fCO2 & pCO2
+     tempot = sw_ptmp(salt, temp, Phydro_bar*10d0, 0.0d0) !potential temperature (C)
      tk0 = tempot + 273.15d0  !potential temperature (K) for fugacity coeff. calc as needed for potential fCO2 & pCO2
      Ptot = Patm              !total pressure (in atm) = atmospheric pressure ONLY
   ELSEIF (trim(opGAS) == 'Pinsitu' .OR. trim(opGAS) == 'pinsitu') THEN
@@ -226,6 +228,11 @@ SUBROUTINE varsolver(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,            
 ! x2 = 1 - x1 = 1 - xCO2 (it is very close to 1, but not quite)
 ! Let's assume that xCO2 = fCO2. Resulting fugcoeff is identical to 8th digit after the decimal.
   xCO2approx = fCO2 * 1.e-6_r8
+  IF (trim(opGAS) == 'Pinsitu' .OR. trim(opGAS) == 'pinsitu') THEN
+!    xCO2approx = 400.0e-6_r8      !a simple test (gives about same result as seacarb for pCO2insitu)
+!    approximate surface xCO2 ~ surface fCO2 (i.e., in situ fCO2 d by exponential pressure correction)
+     xCO2approx = xCO2approx * exp( ((1-Ptot)*32.3_r8)/(82.05736_r8*tk0) )   ! of K0 press. correction, see Weiss (1974, equation 5)
+  ENDIF
   xc2 = (1.0d0 - xCO2approx)**2 
   fugcoeff = exp( Ptot*(B + 2.0d0*xc2*Del)/(Rgas_atm*tk0) )
   pCO2 = fCO2 / fugcoeff
