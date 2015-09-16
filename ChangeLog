@@ -1,0 +1,27 @@
+ChangeLog
+
+version 2.0.1, 2015-09-15
+-----------------------------------
+- Added ChangeLog file
+- Fixed typo in vars.f90 : "Kf = aKs(1)" ->  "Kf = aKf(1)" ; very small impact (mocsy uses the total H+ scale)
+
+version 2.0, 2015-03-09 (published paper)
+-----------------------------------
+- Version described in Orr et al. (2015)
+- includes fast and accurate pH solver routines from Munhoven
+- uses accurate numerical algorithm for Revelle factor, replacing analytical solution (ignores nutrient alkalinity)
+
+version 1.0, 2014-05-05 (published discussion paper)
+-----------------------------------
+- Version described in Orr et al. (2014)
+
+
+REFERENCES
+
+Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean carbonate system: mocsy 2.0, Geosci. Model Dev., 8, 485-499, doi:10.5194/gmd-8-485-2015, 2015.
+
+Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean carbonate system: mocsy 1.0, Geosci. Model Dev. Discuss., 7, 2877-2902, doi:10.5194/gmdd-7-2877-2014, 2014.
+
+
+
+
