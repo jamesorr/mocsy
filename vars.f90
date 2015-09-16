@@ -401,7 +401,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !       Unlike f77, in F90 we can't assign an array (dimen=1) to a scalar in a routine argument
 !       Thus, set scalar constants equal to array (dimension=1) values required as arguments
         K0 = aK0(1) ; K1 = aK1(1) ; K2 = aK2(1) ; Kb = aKb(1) ; Kw = aKw(1) 
-        Ks = aKs(1) ; Kf = aKs(1) ; Kspc = aKspc(1) ; Kspa = aKspa(1) 
+        Ks = aKs(1) ; Kf = aKf(1) ; Kspc = aKspc(1) ; Kspa = aKspa(1) 
         K1p = aK1p(1) ; K2p = aK2p(1) ; K3p = aK3p(1) ; Ksi = aKsi(1)
         St = aSt(1) ; Ft = aFt(1) ; Bt = aBt(1)
 
