@@ -1,0 +1,4 @@
+include README.rst
+include *.txt
+include mocsy/_mocsy.*
+recursive-include mocsy *.py
