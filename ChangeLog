@@ -1,5 +1,9 @@
 ChangeLog
 
+version 2.1, 2015-11-20
+-----------------------------------
+- Added Waters et al. (2014) formulation for K1 and K2 (fix to Millero, 2010)
+
 version 2.0.1, 2015-09-15
 -----------------------------------
 - Added ChangeLog file
@@ -18,10 +22,12 @@ version 1.0, 2014-05-05 (published discussion paper)
 
 REFERENCES
 
-Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean carbonate system: mocsy 2.0, Geosci. Model Dev., 8, 485-499, doi:10.5194/gmd-8-485-2015, 2015.
+Millero, F. J.: Carbonate constants for estuarine waters, Mar. Freshwater
+Res., 61, 139–142, doi:10.1071/MF09254, 2010.
 
-Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean carbonate system: mocsy 1.0, Geosci. Model Dev. Discuss., 7, 2877-2902, doi:10.5194/gmdd-7-2877-2014, 2014.
+Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean carbonate system: mocsy 2.0, Geosci. Model Dev., 8, 485-499, doi:10.5194/gmd-8-485-2015, 2015.  
 
+Orr, J. C. and Epitalon, J.-M.: Improved routines to model the ocean carbonate system: mocsy 1.0, Geosci. Model Dev. Discuss., 7, 2877-2902, doi:10.5194/gmdd-7-2877-2014, 2014.  
 
-
+Waters, J., F. J. Millero, and R. J. Woosley. Corrigendum to “The free proton concentration scale for seawater pH”,[MARCHE: 149 (2013) 8–22]. Marine Chemistry 165 (2014): 66-67.  
 

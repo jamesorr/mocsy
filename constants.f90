@@ -50,6 +50,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !                **** BUT this should only be used when 2 < T < 35 and 19 < S < 43
   !       -> 'm10' means use Millero (2010) formulation for K1 & K2 (see Dickson et al., 2007)
   !                **** Valid for 0 < T < 50°C and 1 < S < 50 psu
+  !       -> 'w14' means use Waters (2014) formulation for K1 & K2 (see Dickson et al., 2007)
+  !                **** Valid for 0 < T < 50°C and 1 < S < 50 psu
   !     -----------
   !     optKf:
   !     ----------
@@ -110,7 +112,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
 !f2py character*2 optional, intent(in) :: optKf='pf'
   CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
-  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
+  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) or \b 'w14' (Waters et al., 2014)
 !f2py character*3 optional, intent(in) :: optK1K2='l'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
   !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
@@ -380,37 +382,37 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
           K2(i) = 10.0d0**(-1*(471.78d0*invtk + 25.9290d0 - 3.16967d0*dlogtk      &
                   - 0.01781d0*s + 0.0001122d0*s2))
         ELSEIF (trim(opK1K2) == 'm10') THEN
-!         Millero (2010, Mar. Fresh Wat. Res.) (total pH scale)
-!         pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
-!         ma1 = 13.4051d0*sqrts + 0.03185d0*s - (5.218e-5)*s2
-!         mb1 = -531.095d0*sqrts - 5.7789d0*s
-!         mc1 = -2.0663d0*sqrts
-!         pK1 = pK1o + ma1 + mb1*invtk + mc1*dlogtk
-!         K1(i) = 10.0d0**(-pK1) 
-
-!         pK2o = 5143.692d0*invtk + 14.613358d0*dlogtk -90.18333d0
-!         ma2 = 21.5724d0*sqrts + 0.1212d0*s - (3.714e-4)*s2
-!         mb2 = -798.292d0*sqrts - 18.951d0*s
-!         mc2 = -3.403d0*sqrts
-!         pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
-!         K2(i) = 10.0d0**(-pK2)
-
 !         Millero (2010, Mar. Fresh Wat. Res.) (seawater pH scale)
           pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
-          ma1 = 13.4038d0*sqrts + 0.03206d0*s - (5.242e-5)*s2
+          ma1 = 13.4038d0*sqrts + 0.03206d0*s - (5.242e-5_r8)*s2
           mb1 = -530.659d0*sqrts - 5.8210d0*s
           mc1 = -2.0664d0*sqrts
           pK1 = pK1o + ma1 + mb1*invtk + mc1*dlogtk
           K1(i) = 10.0d0**(-pK1) 
 
           pK2o = 5143.692d0*invtk + 14.613358d0*dlogtk -90.18333d0
-          ma2 = 21.3728d0*sqrts + 0.1218d0*s - (3.688e-4)*s2
+          ma2 = 21.3728d0*sqrts + 0.1218d0*s - (3.688e-4_r8)*s2
           mb2 = -788.289d0*sqrts - 19.189d0*s
           mc2 = -3.374d0*sqrts
           pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
           K2(i) = 10.0d0**(-pK2)
+        ELSEIF (trim(opK1K2) == 'w14') THEN
+!         Waters, Millero, Woosley (Mar. Chem., 165, 66-67, 2014) (seawater pH scale)
+          pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
+          ma1 = 13.409160d0*sqrts + 0.031646d0*s - (5.1895e-5)*s2
+          mb1 = -531.3642d0*sqrts - 5.713d0*s
+          mc1 = -2.0669166d0*sqrts
+          pK1 = pK1o + ma1 + mb1*invtk + mc1*dlogtk
+          K1(i) = 10.0d0**(-pK1) 
+
+          pK2o = 5143.692d0*invtk + 14.613358d0*dlogtk -90.18333d0
+          ma2 = 21.225890d0*sqrts + 0.12450870d0*s - (3.7243e-4_r8)*s2
+          mb2 = -779.3444d0*sqrts - 19.91739d0*s
+          mc2 = -3.3534679d0*sqrts
+          pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
+          K2(i) = 10.0d0**(-pK2)
         ELSE
-           PRINT *, "optK1K2 must be either 'l' or 'm10'"
+           PRINT *, "optK1K2 must be either 'l', 'm10', or 'w14'"
            STOP
         ENDIF
 
