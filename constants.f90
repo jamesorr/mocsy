@@ -275,19 +275,19 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
 !          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
-        tempot68 = (tempot - 0.0002) / 0.99975
+        tempot68 = (tempot - 0.0002_r4) / 0.99975_r4
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
         tempis68 = sw_temp(sal(i), tempot68, p, 0. )
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
-        tempis = 0.99975*tempis68 + 0.0002
+        tempis = 0.99975_r4*tempis68 + 0.0002_r4
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis    = temp(i)
-        tempis68  = (temp(i) - 0.0002) / 0.99975
+        tempis68  = (temp(i) - 0.0002_r4) / 0.99975_r4
         dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
-        dtempot   = 0.99975*dtempot68 + 0.0002
+        dtempot   = 0.99975_r4*dtempot68 + 0.0002_r4
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         PRINT *,"you specified optT =", trim(optT) 
@@ -295,7 +295,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
      ENDIF
 
 !    Compute constants:
-     IF (temp(i) >= -5. .AND. temp(i) < 1.0e+2) THEN
+     IF (temp(i) >= -5. .AND. temp(i) < 1.0e+2_r4) THEN
 !       Test to indicate if any of input variables are unreasonable
         IF (      sal(i) < 0.  .OR.  sal(i) > 1e+3) THEN
            PRINT *, 'i, icount, temp, sal =', i, icount, temp(i), sal(i)
@@ -376,13 +376,13 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !       K1 = [H][HCO3]/[H2CO3]
 !       K2 = [H][CO3]/[HCO3]
         IF (trim(opK1K2) == 'l') THEN
-!         Mehrbach et al. (1973) refit, by Lueker et al. (2000) (total pH scale)
+!         Mehrbach et al. (1973) refit, by Lueker et al. (2000) (total scale)
           K1(i) = 10.0d0**(-1.0d0*(3633.86d0*invtk - 61.2172d0 + 9.6777d0*dlogtk  &
                   - 0.011555d0*s + 0.0001152d0*s2))
           K2(i) = 10.0d0**(-1*(471.78d0*invtk + 25.9290d0 - 3.16967d0*dlogtk      &
                   - 0.01781d0*s + 0.0001122d0*s2))
         ELSEIF (trim(opK1K2) == 'm10') THEN
-!         Millero (2010, Mar. Fresh Wat. Res.) (seawater pH scale)
+!         Millero (2010, Mar. Fresh Wat. Res.) (seawater scale)
           pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
           ma1 = 13.4038d0*sqrts + 0.03206d0*s - (5.242e-5_r8)*s2
           mb1 = -530.659d0*sqrts - 5.8210d0*s
@@ -397,7 +397,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
           pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
           K2(i) = 10.0d0**(-pK2)
         ELSEIF (trim(opK1K2) == 'w14') THEN
-!         Waters, Millero, Woosley (Mar. Chem., 165, 66-67, 2014) (seawater pH scale)
+!         Waters, Millero, Woosley (Mar. Chem., 165, 66-67, 2014) (seawater scale)
           pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
           ma1 = 13.409160d0*sqrts + 0.031646d0*s - (5.1895e-5)*s2
           mb1 = -531.3642d0*sqrts - 5.713d0*s
