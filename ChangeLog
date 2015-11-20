@@ -1,5 +1,9 @@
 ChangeLog
 
+version 2.1.1, 2015-11-20
+-----------------------------------
+- Added _r4 to single-precision temperature-scale conversion constants
+
 version 2.1, 2015-11-20
 -----------------------------------
 - Added Waters et al. (2014) formulation for K1 and K2 (fix to Millero, 2010)
