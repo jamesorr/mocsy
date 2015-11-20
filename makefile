@@ -3,129 +3,209 @@
 #         gmake clean
 #         gmake 
 #  -------------------
-#  GNU_Makefile to COMPILE and LINK  test_mocsy.f90 and mocsy.f90
+#  GNU_Makefile to 
+#  - COMPILE and LINK  test_mocsy.f90 and mocsy.f90
+#  - generate library libmocsy.a
+#  - generate python interface module _mocsy.so
+#
 #  James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, 91191 Gif-sur-Yvette, France
 #  15 January 2014
 
+#=======================================================================
+#                   define the compiler names
+#=======================================================================
+CC       = gcc
 # To use another Fortran compiler, replace "f95" in FC and F90 lines with your compiler command
 # For example, comment out 2 lines below with "f95" & uncomment the following 2 lines for "gfortran"
 #FC = fort77
 #FC = xlf
 #FC = f95
 #F90 = f95
-FC = gfortran
 F90 = gfortran
 #FC = ifort
 #F90 = ifort
+PYTHON   = python2
 
 #DEBUGFLAGS = -g
 #LDFLAGS = -L/usr/local/lib -lnetcdf -lnetcdff
 LDFLAGS = -L./ -lmocsy
 INCLUDEFLAGS = -I/usr/local/include .
 
+
+#=======================================================================
+#                   define desired precision
+#=======================================================================
+
+# set to  2 if you wish results in DOUBLE precision
+# set to 1 or 0 if SINGLE
+PRECISION = 2
+
+#=======================================================================
+#                     additional flags
+#=======================================================================
+
+ifeq ($(F90),gfortran)
+	FPP      = gfortran -E
+	FPP_F90FLAGS = -x f95-cpp-input -fPIC -DUSE_PRECISION=$(PRECISION)
+	F90FLAGS = -fPIC -x f95-cpp-input -DUSE_PRECISION=$(PRECISION)
+    #FCOMP    = gfortran
+    FCOMP    = gnu95
+    LIBS     =
+endif
+
+ifeq ($(F90),ifort)
+
+	FPP      = gfortran -E # gfortran f90wrap temp files only. not compilation
+	FPP_F90FLAGS = -x f95-cpp-input -fPIC -DUSE_PRECISION=$(PRECISION)
+	F90FLAGS = -fpscomp logicals -fPIC -DUSE_PRECISION=$(PRECISION)  # use 1 and 0 for True and False
+    FCOMP    = intelem # for f2py
+    LIBS =
+endif
+
+CFLAGS = -fPIC #     ==> universal for ifort, gfortran, pgi
+
+#=======================================================================
+#=======================================================================
+
+UNAME = $(shell uname)
+
+ifeq (${UNAME}, Darwin)
+  LIBTOOL = libtool -static -o
+else
+  LIBTOOL = ar src
+endif
+
+# ======================================================================
+# PROJECT CONFIG, do not put spaced behind the variables
+# ======================================================================
+# mapping between Fortran and C types
+KIND_MAP = kind_map
+
+#=======================================================================
+#       List all source files required for the project
+#=======================================================================
+
+LIBSRC_SOURCES = \
+          singledouble \
+	  DNAD \
+	  sw_adtg \
+          sw_ptmp \
+          sw_temp \
+          tpot \
+          tis \
+          p80 \
+          phsolvers \
+          rho \
+          rhoinsitu \
+          depth2press \
+          constants \
+          varsolver \
+          vars \
+          p2fCO2 \
+          f2pCO2 \
+          gasx \
+	  derivnum
+
+# file names
+LIBSRC_FILES = $(addsuffix .f90,${LIBSRC_SOURCES})
+
+# object files
+LIBSRC_OBJECTS = $(addsuffix .o,${LIBSRC_SOURCES})
+
+# only used when cleaning up
+LIBSRC_FPP_FILES = $(addsuffix .fpp,${LIBSRC_SOURCES})
+
+#=======================================================================
+#       List all source files that require a Python interface
+#=======================================================================
+
+# names (without suffix), f90 sources
+LIBSRC_WRAP_SOURCES = ${LIBSRC_SOURCES}
+
+# file names
+LIBSRC_WRAP_FILES = $(addsuffix .f90,${LIBSRC_WRAP_SOURCES})
+
+# object files
+LIBSRC_WRAP_OBJECTS = $(addsuffix .o,${LIBSRC_WRAP_SOURCES})
+
+# fpp files
+LIBSRC_WRAP_FPP_FILES = $(addsuffix .fpp,${LIBSRC_WRAP_SOURCES})
+
+
+#=======================================================================
+#
+#=======================================================================
+
 # List of executables to be built within the package
-PROGRAMS = libmocsy.a test_mocsy mocsy.so
+PROGRAMS = libmocsy.a test_mocsy test_vars _mocsy.so
 
 # "make" builds all
 all: $(PROGRAMS)
 
 #---------------------------------------------------------------------------
-
-SOURCES = singledouble.f90 \
-          sw_adtg.f90 \
-          sw_ptmp.f90 \
-          sw_temp.f90 \
-          tpot.f90 \
-          tis.f90 \
-          p80.f90 \
-          phsolvers.f90 \
-          rho.f90 \
-          rhoinsitu.f90 \
-          depth2press.f90 \
-          constants.f90 \
-          varsolver.f90 \
-          vars.f90 \
-          p2fCO2.f90 \
-          f2pCO2.f90 \
-          gasx.f90 
-
-OBJS =  singledouble.o \
-        sw_adtg.o \
-        sw_ptmp.o \
-        sw_temp.o \
-        tpot.o \
-        tis.o \
-        p80.o \
-        phsolvers.o \
-        rho.o \
-        rhoinsitu.o \
-        depth2press.o \
-        constants.o \
-        varsolver.o \
-        vars.o \
-        p2fCO2.o \
-        f2pCO2.o \
-        gasx.o
-
-#TOBJS = $(OBJS) \
-#        test_mocsy.o
-
-#TOBJS2 = $(OBJS) \
-#        test_mocsy2.o
-
 EXEC = test_mocsy
 
 library = libmocsy.a
-#---------------------------------------------------------------------------
-
-# General rule for building prog from prog.o; $^ (GNU extension) is
-# used in order to list additional object files on which the
-# executable depends
-#%: %.o
-#	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
-
-# General Pattern rules for building prog.o from prog.f90 or prog.F90; $< is
-# used in order to list only the first prerequisite (the source file)
-# and not the additional prerequisites such as module or include files
-%.o: %.f90
-	$(FC) $(FCFLAGS) -c $<
 
 #---------------------------------------------------------------------------
 # Build the mocsy library containing the object files (not used, illustration only)
-$(library):  $(OBJS)
-	ar cr $(library) $(OBJS)
+$(library):  $(LIBSRC_OBJECTS)
+	ar cr $(library) $(LIBSRC_OBJECTS)
 
 # Build the Fortran program executable that tests the mocsy library (test_mocsy)
-#$(EXEC): $(TOBJS) $(library)
-#	$(FC) $(FCFLAGS) -o $(EXEC) $(TOBJS) 
-$(EXEC): $(OBJS) $(library) 
-	$(FC) $(FCFLAGS) -o $@ $@.f90 $(LDFLAGS)
+$(EXEC): $(LIBSRC_OBJECTS) test_mocsy.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
-# Build the shared object file for python
-mocsy.so: $(OBJS)
-	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
+test_vars:  $(LIBSRC_OBJECTS) test_vars.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+test_derivauto:  $(LIBSRC_OBJECTS) test_derivauto.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+test_derivnum:  $(LIBSRC_OBJECTS) test_derivnum.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+#=======================================================================
+#                 Relevant suffixes
+#=======================================================================
+
+.SUFFIXES: .f90 .fpp
+
 #---------------------------------------------------------------------------
-
-# General rule for building prog from prog.o; $^ (GNU extension) is
-# used in order to list additional object files on which the
-# executable depends
-%: %.o
-	$(FC) $(FCFLAGS) -o $@ $^ 
-
-# General rules for building prog.o from prog.f90 or prog.F90; $< is
-# used in order to list only the first prerequisite (the source file)
-# and not the additional prerequisites such as module or include files
-%.o: %.f90
-	$(FC) $(FCFLAGS) -c $<
-
-%.o: %.F90
-	$(FC) $(FCFLAGS) -c $<
 
 # Utility targets
 .PHONY: clean veryclean
 
+
 clean:
-	rm -f *.o *.mod *.so
+	-rm *.o *.so *.a *.mod *.fpp f90wrap*.f90 mocsy.py *.pyc
+	-rm -rf mocsy_pkg/ src.*
+
+
+.f90.o:
+	${F90} ${F90FLAGS} -c $< -o $@
+
+
+.c.o:
+	${CC} ${CFLAGS} -c $< -o $@
+
+
+.f90.fpp:
+	${FPP} ${FPP_F90FLAGS} $<  -o $@
+
+
+libsrc.a: ${LIBSRC_OBJECTS}
+	${LIBTOOL} $@ $?
+
+
+_mocsy.so: libsrc.a ${LIBSRC_FPP_FILES}
+	f90wrap -m mocsy ${LIBSRC_WRAP_FPP_FILES} -k ${KIND_MAP} -v
+	f2py-f90wrap --fcompiler=$(FCOMP) --build-dir . -c -m _mocsy -L. -lsrc f90wrap*.f90
+
+
+_mocsy_pkg.so: libsrc.a ${LIBSRC_FPP_FILES}
+	f90wrap -m mocsy_pkg ${LIBSRC_WRAP_FPP_FILES} -k ${KIND_MAP} -v -P
+	f2py-f90wrap --fcompiler=$(FCOMP) --build-dir . -c -m _mocsy_pkg -L. -lsrc f90wrap*.f90
 
 veryclean: clean
 	rm -f *~ $(PROGRAMS) 

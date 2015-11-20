@@ -16,6 +16,7 @@ MODULE mphsolvers
 ! 6) commented out arguments and equations for NH4 and H2S acid systems
 
 USE msingledouble
+USE Dual_Num_Auto_Diff
 IMPLICIT NONE
 
 ! General parameters
@@ -28,7 +29,7 @@ INTEGER, PARAMETER :: jp_maxniter_atsec    = 50
 INTEGER, PARAMETER :: jp_maxniter_atfast   = 50
 
 ! Bookkeeping variables for each method
-! - SOLVE_AT_GENERAL
+! - SOLVE_AT_GENERAL and SOLVE_AT_GENERAL_DNAD
 INTEGER :: niter_atgen    = jp_maxniter_atgen
 
 ! - SOLVE_AT_GENERAL_SEC
@@ -82,6 +83,8 @@ FUNCTION equation_at(p_alktot, p_h,       p_dictot, p_bortot,                 &
                      p_so4tot, p_flutot,                                      &
                      K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi,          &
                      p_deriveqn)
+
+  ! Purpose: Compute total alkalinity from ion concentrations and equilibrium constants
 
 USE msingledouble
 IMPLICIT NONE
@@ -216,6 +219,151 @@ END FUNCTION equation_at
 
 !===============================================================================
 
+FUNCTION equation_at_DNAD(p_alktot, p_h,       p_dictot, p_bortot,                 &
+                     p_po4tot, p_siltot,                                      &
+                     p_so4tot, p_flutot,                                      &
+                     K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi,          &
+                     p_deriveqn)
+  ! Purpose: Compute total alkalinity from ion concentrations and equilibrium constants
+  ! and compute its partial derivatives using dual numbers (DNAD) technique
+
+  ! It is similar to subroutine equation_at above except that it computes
+  ! partial derivatives of total alkalinity
+  ! with respect to four input variables : ta, tc pt and sit
+
+USE msingledouble
+IMPLICIT NONE
+TYPE(DUAL_NUM) ::equation_at_DNAD
+
+! Argument variables
+TYPE(DUAL_NUM), INTENT(IN)            :: p_alktot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_h
+TYPE(DUAL_NUM), INTENT(IN)            :: p_dictot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_bortot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_po4tot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_siltot
+!TYPE(DUAL_NUM), INTENT(IN)            :: p_nh4tot
+!TYPE(DUAL_NUM), INTENT(IN)            :: p_h2stot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_so4tot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_flutot
+TYPE(DUAL_NUM), INTENT(IN)            :: K0, K1, K2, Kb, Kw, Ks, Kf
+TYPE(DUAL_NUM), INTENT(IN)            :: K1p, K2p, K3p, Ksi
+TYPE(DUAL_NUM), INTENT(OUT), OPTIONAL :: p_deriveqn
+
+! Local variables 
+!-----------------
+TYPE(DUAL_NUM) ::znumer_dic, zdnumer_dic, zdenom_dic, zalk_dic, zdalk_dic
+TYPE(DUAL_NUM) ::znumer_bor, zdnumer_bor, zdenom_bor, zalk_bor, zdalk_bor
+TYPE(DUAL_NUM) ::znumer_po4, zdnumer_po4, zdenom_po4, zalk_po4, zdalk_po4
+TYPE(DUAL_NUM) ::znumer_sil, zdnumer_sil, zdenom_sil, zalk_sil, zdalk_sil
+TYPE(DUAL_NUM) ::znumer_nh4, zdnumer_nh4, zdenom_nh4, zalk_nh4, zdalk_nh4
+TYPE(DUAL_NUM) ::znumer_h2s, zdnumer_h2s, zdenom_h2s, zalk_h2s, zdalk_h2s
+TYPE(DUAL_NUM) ::znumer_so4, zdnumer_so4, zdenom_so4, zalk_so4, zdalk_so4
+TYPE(DUAL_NUM) ::znumer_flu, zdnumer_flu, zdenom_flu, zalk_flu, zdalk_flu
+TYPE(DUAL_NUM) ::                                     zalk_wat, zdalk_wat
+TYPE(DUAL_NUM) ::aphscale
+
+! TOTAL H+ scale: conversion factor for Htot = aphscale * Hfree
+aphscale = 1._wp + p_so4tot/Ks
+
+! H2CO3 - HCO3 - CO3 : n=2, m=0
+znumer_dic = 2._wp*K1*K2 + p_h*       K1
+zdenom_dic =       K1*K2 + p_h*(      K1 + p_h)
+zalk_dic   = p_dictot * (znumer_dic/zdenom_dic)
+
+! B(OH)3 - B(OH)4 : n=1, m=0
+znumer_bor =       Kb
+zdenom_bor =       Kb + p_h
+zalk_bor   = p_bortot * (znumer_bor/zdenom_bor)
+
+! H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
+znumer_po4 = 3._wp*K1p*K2p*K3p + p_h*(2._wp*K1p*K2p + p_h* K1p)
+zdenom_po4 =       K1p*K2p*K3p + p_h*(      K1p*K2p + p_h*(K1p + p_h))
+zalk_po4   = p_po4tot * (znumer_po4/zdenom_po4 - 1._wp) ! Zero level of H3PO4 = 1
+
+! H4SiO4 - H3SiO4 : n=1, m=0
+znumer_sil =       Ksi
+zdenom_sil =       Ksi + p_h
+zalk_sil   = p_siltot * (znumer_sil/zdenom_sil)
+
+! NH4 - NH3 : n=1, m=0
+!znumer_nh4 =       api1_nh4
+!zdenom_nh4 =       api1_nh4 + p_h
+!zalk_nh4   = p_nh4tot * (znumer_nh4/zdenom_nh4)
+! Note: api1_nh4 = Knh4
+
+! H2S - HS : n=1, m=0
+!znumer_h2s =       api1_h2s
+!zdenom_h2s =       api1_h2s + p_h
+!zalk_h2s   = p_h2stot * (znumer_h2s/zdenom_h2s)
+! Note: api1_h2s = Kh2s
+
+! HSO4 - SO4 : n=1, m=1
+znumer_so4 =       Ks
+zdenom_so4 =       Ks + p_h
+zalk_so4   = p_so4tot * (znumer_so4/zdenom_so4 - 1._wp)
+
+! HF - F : n=1, m=1
+znumer_flu =       Kf
+zdenom_flu =       Kf + p_h
+zalk_flu   = p_flutot * (znumer_flu/zdenom_flu - 1._wp)
+
+! H2O - OH
+zalk_wat   = Kw/p_h - p_h/aphscale
+
+equation_at_DNAD =  zalk_dic + zalk_bor + zalk_po4 + zalk_sil &
+                  + zalk_so4 + zalk_flu                       &
+                  + zalk_wat - p_alktot
+
+IF(PRESENT(p_deriveqn)) THEN
+   ! H2CO3 - HCO3 - CO3 : n=2
+   zdnumer_dic = K1*K1*K2 + p_h*(4._wp*K1*K2               &
+                          + p_h*       K1    )
+   zdalk_dic   = -p_dictot*(zdnumer_dic/zdenom_dic**2)
+
+   ! B(OH)3 - B(OH)4 : n=1
+   zdnumer_bor = Kb
+   zdalk_bor   = -p_bortot*(zdnumer_bor/zdenom_bor**2)
+
+   ! H3PO4 - H2PO4 - HPO4 - PO4 : n=3
+   zdnumer_po4 = K1p*K2p*K1p*K2p*K3p + p_h*(4._wp*K1p*K1p*K2p*K3p                &
+                                     + p_h*(9._wp*K1p*K2p*K3p + K1p*K1p*K2p      &
+                                     + p_h*(4._wp*K1p*K2p                        &
+                                     + p_h*       K1p)))
+   zdalk_po4   = -p_po4tot * (zdnumer_po4/zdenom_po4**2)
+
+   ! H4SiO4 - H3SiO4 : n=1
+   zdnumer_sil = Ksi
+   zdalk_sil   = -p_siltot * (zdnumer_sil/zdenom_sil**2)
+
+!  ! NH4 - NH3 : n=1
+!  zdnumer_nh4 = Knh4
+!  zdalk_nh4   = -p_nh4tot * (zdnumer_nh4/zdenom_nh4**2)
+
+!  ! H2S - HS : n=1
+!  zdnumer_h2s = api1_h2s
+!  zdalk_h2s   = -p_h2stot * (zdnumer_h2s/zdenom_h2s**2)
+
+   ! HSO4 - SO4 : n=1
+   zdnumer_so4 = Ks
+   zdalk_so4   = -p_so4tot * (zdnumer_so4/zdenom_so4**2)
+
+   ! HF - F : n=1
+   zdnumer_flu = Kf
+   zdalk_flu   = -p_flutot * (zdnumer_flu/zdenom_flu**2)
+
+!  p_deriveqn =   zdalk_dic + zdalk_bor + zdalk_po4 + zdalk_sil &
+!               + zdalk_nh4 + zdalk_h2s + zdalk_so4 + zdalk_flu &
+!               - Kw/p_h**2 - 1._wp/aphscale
+   p_deriveqn =   zdalk_dic + zdalk_bor + zdalk_po4 + zdalk_sil &
+                                        + zdalk_so4 + zdalk_flu &
+                - Kw/p_h**2 - 1._wp/aphscale
+ENDIF
+RETURN
+END FUNCTION equation_at_DNAD
+
+!===============================================================================
+
 SUBROUTINE ahini_for_at(p_alkcb, p_dictot, p_bortot, K1, K2, Kb, p_hini)
 
 ! Subroutine returns the root for the 2nd order approximation of the
@@ -284,6 +432,8 @@ FUNCTION solve_at_general(p_alktot, p_dictot, p_bortot,                       &
                           K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi,     &
                           p_hini,   p_val)
 
+! Purpose: Compute [H°] ion concentration from sea-water ion concentrations,
+!          alkalinity, DIC, and equilibrium constants
 ! Universal pH solver that converges from any given initial value,
 ! determines upper an lower bounds for the solution if required
 
@@ -478,6 +628,224 @@ IF(PRESENT(p_val)) THEN
 ENDIF
 RETURN
 END FUNCTION solve_at_general
+
+!===============================================================================
+
+FUNCTION solve_at_general_DNAD (p_alktot, p_dictot, p_bortot,                 &
+                          p_po4tot, p_siltot,                                 &
+                          p_so4tot, p_flutot,                                 &
+                          K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi,     &
+                          p_hini,   p_val)
+
+! Purpose: Compute [H+] ion concentration from sea-water ion concentrations,
+! alkalinity, DIC, and equilibrium constants
+! It also computes partial derivatives of [H+] using dual numbers (DNAD) technique
+
+! Universal pH solver that converges from any given initial value,
+! determines upper an lower bounds for the solution if required
+
+! It is similar to subroutine solve_at_general above except that it computes
+! partial derivatives of [H°] ion concentration
+! with respect to four input variables : ta, tc pt and sit
+
+! NOTE : all input and output parameters are of type DUAL_NUM (dual number)
+!        where they are of type REAL in standard version of this subroutine.
+!        But only four input parameters are required to be passed as such :
+!         p_alktot, p_dictot, p_po4tot and p_siltot
+
+USE msingledouble
+IMPLICIT NONE
+! value and partial derivatives of [H+] are returned in one objet of type DUAL_NUM
+TYPE(DUAL_NUM) ::SOLVE_AT_GENERAL_DNAD
+
+! Argument variables 
+!--------------------
+TYPE(DUAL_NUM), INTENT(IN)            :: p_alktot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_dictot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_bortot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_po4tot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_siltot
+!TYPE(DUAL_NUM), INTENT(IN)            :: p_nh4tot
+!TYPE(DUAL_NUM), INTENT(IN)            :: p_h2stot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_so4tot
+TYPE(DUAL_NUM), INTENT(IN)            :: p_flutot
+TYPE(DUAL_NUM), INTENT(IN)            :: K0, K1, K2, Kb, Kw, Ks, Kf
+TYPE(DUAL_NUM), INTENT(IN)            :: K1p, K2p, K3p, Ksi
+TYPE(DUAL_NUM), INTENT(IN), OPTIONAL  :: p_hini
+TYPE(DUAL_NUM), INTENT(OUT), OPTIONAL :: p_val
+
+! Local variables 
+!-----------------
+REAL(KIND=wp)  ::  zh_ini
+TYPE(DUAL_NUM) ::  zh, zh_prev, zh_lnfactor
+REAL(KIND=wp)  ::  zalknw_inf, zalknw_sup
+TYPE(DUAL_NUM) ::  zh_min, zh_max
+TYPE(DUAL_NUM) ::  zdelta, zh_delta
+TYPE(DUAL_NUM) ::  zeqn, zdeqndh, zeqn_absmin
+TYPE(DUAL_NUM) ::  aphscale
+LOGICAL        :: l_exitnow
+REAL(KIND=wp), PARAMETER :: pz_exp_threshold = 1.0_wp
+
+! TOTAL H+ scale: conversion factor for Htot = aphscale * Hfree
+aphscale = 1._wp + p_so4tot/Ks
+
+IF(PRESENT(p_hini)) THEN
+   zh_ini = p_hini%x_ad_
+ELSE
+   CALL ahini_for_at(p_alktot%x_ad_, p_dictot%x_ad_, p_bortot%x_ad_, K1%x_ad_, K2%x_ad_, Kb%x_ad_, zh_ini)
+ENDIF
+
+ CALL anw_infsup(p_dictot%x_ad_, p_bortot%x_ad_,                               &
+                 p_po4tot%x_ad_, p_siltot%x_ad_,                               &
+                 p_so4tot%x_ad_, p_flutot%x_ad_,                               &
+                 zalknw_inf, zalknw_sup)
+
+zdelta = (p_alktot-zalknw_inf)**2 + 4._wp*Kw/aphscale
+
+IF(p_alktot >= zalknw_inf) THEN
+   zh_min = 2._wp*Kw /( p_alktot-zalknw_inf + SQRT(zdelta) )
+ELSE
+   zh_min = aphscale*(-(p_alktot-zalknw_inf) + SQRT(zdelta) ) / 2._wp
+ENDIF
+
+zdelta = (p_alktot-zalknw_sup)**2 + 4._wp*Kw/aphscale
+
+IF(p_alktot <= zalknw_sup) THEN
+   zh_max = aphscale*(-(p_alktot-zalknw_sup) + SQRT(zdelta) ) / 2._wp
+ELSE
+   zh_max = 2._wp*Kw /( p_alktot-zalknw_sup + SQRT(zdelta) )
+ENDIF
+
+zh = MAX(MIN(zh_max, zh_ini), zh_min)
+niter_atgen        = 0                 ! Reset counters of iterations
+zeqn_absmin        = HUGE(1._wp)
+
+DO
+   IF(niter_atgen >= jp_maxniter_atgen) THEN
+      zh = -1._wp
+      EXIT
+   ENDIF
+
+   zh_prev = zh
+   zeqn = equation_at_DNAD(p_alktot, zh,       p_dictot, p_bortot,             &
+                      p_po4tot, p_siltot,                                      &
+                      p_so4tot, p_flutot,                                      &
+                      K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi,          &
+                      P_DERIVEQN = zdeqndh)
+
+   ! Adapt bracketing interval
+   IF(zeqn > 0._wp) THEN
+      zh_min = zh_prev
+   ELSEIF(zeqn < 0._wp) THEN
+      zh_max = zh_prev
+   ELSE
+      ! zh is the root; unlikely but, one never knows
+      EXIT
+   ENDIF
+
+   ! Now determine the next iterate zh
+   niter_atgen = niter_atgen + 1
+
+   IF(ABS(zeqn) >= 0.5_wp*zeqn_absmin) THEN
+      ! if the function evaluation at the current point is
+      ! not decreasing faster than with a bisection step (at least linearly)
+      ! in absolute value take one bisection step on [ph_min, ph_max]
+      ! ph_new = (ph_min + ph_max)/2d0
+      !
+      ! In terms of [H]_new:
+      ! [H]_new = 10**(-ph_new)
+      !         = 10**(-(ph_min + ph_max)/2d0)
+      !         = SQRT(10**(-(ph_min + phmax)))
+      !         = SQRT(zh_max * zh_min)
+      zh = SQRT(zh_max * zh_min)
+      zh_lnfactor = (zh - zh_prev)/zh_prev ! Required to test convergence below
+   ELSE
+      ! dzeqn/dpH = dzeqn/d[H] * d[H]/dpH
+      !           = -zdeqndh * LOG(10) * [H]
+      ! \Delta pH = -zeqn/(zdeqndh*d[H]/dpH) = zeqn/(zdeqndh*[H]*LOG(10))
+      !
+      ! pH_new = pH_old + \deltapH
+      !
+      ! [H]_new = 10**(-pH_new)
+      !         = 10**(-pH_old - \Delta pH)
+      !         = [H]_old * 10**(-zeqn/(zdeqndh*[H]_old*LOG(10)))
+      !         = [H]_old * EXP(-LOG(10)*zeqn/(zdeqndh*[H]_old*LOG(10)))
+      !         = [H]_old * EXP(-zeqn/(zdeqndh*[H]_old))
+
+      zh_lnfactor = -zeqn/(zdeqndh*zh_prev)
+
+      IF(ABS(zh_lnfactor) > pz_exp_threshold) THEN
+         zh          = zh_prev*EXP(zh_lnfactor)
+      ELSE
+         zh_delta    = zh_lnfactor*zh_prev
+         zh          = zh_prev + zh_delta
+      ENDIF
+
+      IF( zh < zh_min ) THEN
+         ! if [H]_new < [H]_min
+         ! i.e., if ph_new > ph_max then
+         ! take one bisection step on [ph_prev, ph_max]
+         ! ph_new = (ph_prev + ph_max)/2d0
+         ! In terms of [H]_new:
+         ! [H]_new = 10**(-ph_new)
+         !         = 10**(-(ph_prev + ph_max)/2d0)
+         !         = SQRT(10**(-(ph_prev + phmax)))
+         !         = SQRT([H]_old*10**(-ph_max))
+         !         = SQRT([H]_old * zh_min)
+         zh                = SQRT(zh_prev * zh_min)
+         zh_lnfactor       = (zh - zh_prev)/zh_prev ! Required to test convergence below
+      ENDIF
+
+      IF( zh > zh_max ) THEN
+         ! if [H]_new > [H]_max
+         ! i.e., if ph_new < ph_min, then
+         ! take one bisection step on [ph_min, ph_prev]
+         ! ph_new = (ph_prev + ph_min)/2d0
+         ! In terms of [H]_new:
+         ! [H]_new = 10**(-ph_new)
+         !         = 10**(-(ph_prev + ph_min)/2d0)
+         !         = SQRT(10**(-(ph_prev + ph_min)))
+         !         = SQRT([H]_old*10**(-ph_min))
+         !         = SQRT([H]_old * zhmax)
+         zh                = SQRT(zh_prev * zh_max)
+         zh_lnfactor       = (zh - zh_prev)/zh_prev ! Required to test convergence below
+      ENDIF
+   ENDIF
+
+   zeqn_absmin = MIN( ABS(zeqn), zeqn_absmin)
+
+   ! Stop iterations once |\delta{[H]}/[H]| < rdel
+   ! <=> |(zh - zh_prev)/zh_prev| = |EXP(-zeqn/(zdeqndh*zh_prev)) -1| < rdel
+   ! |EXP(-zeqn/(zdeqndh*zh_prev)) -1| ~ |zeqn/(zdeqndh*zh_prev)|
+
+   ! Alternatively:
+   ! |\Delta pH| = |zeqn/(zdeqndh*zh_prev*LOG(10))|
+   !             ~ 1/LOG(10) * |\Delta [H]|/[H]
+   !             < 1/LOG(10) * rdel
+
+   ! Hence |zeqn/(zdeqndh*zh)| < rdel
+
+   ! rdel <-- pp_rdel_ah_target
+
+   l_exitnow = (ABS(zh_lnfactor) < pp_rdel_ah_target)
+
+   IF(l_exitnow) EXIT
+ENDDO
+
+solve_at_general_DNAD = zh
+
+IF(PRESENT(p_val)) THEN
+   IF(zh > 0._wp) THEN
+      p_val = equation_at_DNAD(p_alktot, zh,       p_dictot, p_bortot,         &
+                          p_po4tot, p_siltot,                                  &
+                          p_so4tot, p_flutot,                                  &
+                          K0, K1, K2, Kb, Kw, Ks, Kf, K1p, K2p, K3p, Ksi)    
+   ELSE
+      p_val = HUGE(1._wp)
+   ENDIF
+ENDIF
+RETURN
+END FUNCTION solve_at_general_DNAD
 
 !===============================================================================
 

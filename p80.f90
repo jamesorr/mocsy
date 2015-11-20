@@ -25,17 +25,17 @@ FUNCTION p80(dpth,xlat)
 
 ! Input variables:
   !> depth [m]
-  REAL(kind=r4), INTENT(in) :: dpth
+  REAL(kind=rx), INTENT(in) :: dpth
   !> latitude [degrees]
-  REAL(kind=r4), INTENT(in) :: xlat
+  REAL(kind=rx), INTENT(in) :: xlat
 
 ! Output variable:
   !> pressure [db]
-  REAL(kind=r4) :: p80
+  REAL(kind=rx) :: p80
 
 ! Local variables:
-  REAL(kind=r4) :: pi
-  REAL(kind=r4) :: plat, d, c1
+  REAL(kind=rx) :: pi
+  REAL(kind=rx) :: plat, d, c1
 
   pi=3.141592654
 

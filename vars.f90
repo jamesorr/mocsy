@@ -10,8 +10,9 @@ CONTAINS
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS                          )
-
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS,                         &
+                ph_deriv, pco2_deriv, fco2_deriv, co2_deriv, hco3_deriv, co3_deriv,       &
+                OmegaA_deriv, OmegaC_deriv                                                )
   !   Purpose:
   !     Computes other standard carbonate system variables (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)
   !     as 1D arrays
@@ -101,13 +102,38 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !     p = pressure [decibars]; p = f(depth, latitude) if computed from depth [m] OR p = depth if [db]
   !     tempis  = in-situ temperature [degrees C]
 
+  !     OUTPUT OPTIONAL variables:
+  !     =========================
+  !
+  !     For each chemical OUTPUT variable, there is an OPTIONAL one that contains 
+  !     partial derivatives with respect to 6 input variables : 
+  !         alk, dic, phosphate, silicate, temperature and salinity.
+  !
+  !     ph_deriv   = derivatives of pH on total scale
+  !     pco2_deriv = derivatives of CO2 partial pressure (uatm)
+  !     fco2_deriv = derivatives of CO2 fugacity (uatm)
+  !     co2_deriv  = derivatives of aqueous CO2 concentration in [mol/kg] or [mol/m^3] depending on optCON
+  !     hco3_deriv = derivatives of bicarbonate (HCO3-) concentration in [mol/kg] or [mol/m^3] depending on optCON
+  !     co3_deriv  = derivatives of carbonate (CO3--) concentration in [mol/kg] or [mol/m^3] depending on optCON
+  !     OmegaA_deriv = derivatives of Omega for aragonite, i.e., the aragonite saturation state
+  !     OmegaC_deriv = derivatives of Omega for calcite, i.e., the   calcite saturation state
+  !     BetaD_deriv  = derivatives of Revelle factor   dpCO2/pCO2 / dDIC/DIC
+  !
+
+#if USE_PRECISION == 2
+#   define SGLE(x)    (x)
+#else
+#   define SGLE(x)    REAL(x)
+#endif
+
   USE msingledouble
   USE mconstants
   USE mp80
   USE mrho
   USE msw_temp
   USE mvarsolver
-
+  USE Dual_Num_Auto_Diff
+  
   IMPLICIT NONE
 
 ! Input variables
@@ -115,24 +141,24 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
-  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: temp
   !> salinity <b>[psu]</b>
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
   !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: alk
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: alk
   !> dissolved inorganic carbon in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: dic
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: dic
   !> SiO2 concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: sil
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sil
   !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: phos
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: phos
 !f2py optional , depend(sal) :: n=len(sal)
   !> atmospheric pressure <b>[atm]</b>
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> depth in \b meters (when optP='m') or \b decibars (when optP='db')
-  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: depth
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: depth
   !> latitude <b>[degrees north]</b>
-  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: lat
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: lat
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
@@ -162,54 +188,75 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
 ! Output variables:
   !> pH on the <b>total scale</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: ph
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: ph
   !> CO2 partial pressure <b>[uatm]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: pco2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pco2
   !> CO2 fugacity <b>[uatm]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: fco2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: fco2
   !> aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optCON
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: co2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co2
   !> bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: hco3
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: hco3
   !> carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: co3
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co3
   !> Omega for aragonite, i.e., the aragonite saturation state
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: OmegaA
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: OmegaA
   !> Omega for calcite, i.e., the calcite saturation state
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: OmegaC
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: OmegaC
   !> Revelle factor, i.e., dpCO2/pCO2 / dDIC/DIC
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: BetaD
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: BetaD
   !> in-situ density of seawater; rhoSW = f(s, t, p) in <b>[kg/m3]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: rhoSW
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: rhoSW
   !> pressure <b>[decibars]</b>; p = f(depth, latitude) if computed from depth [m] (when optP='m') OR p = depth [db] (when optP='db')
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: p
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: p
   !> in-situ temperature \b <b>[degrees C]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: tempis
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: tempis
+
+! Optional output variables:
+  !> derivatives of pH on the <b>total scale</b>
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: ph_deriv
+  !> derivatives of CO2 partial pressure <b>[uatm]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: pco2_deriv
+  !> derivatives of CO2 fugacity <b>[uatm]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: fco2_deriv
+  !> derivatives of aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optCON
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: co2_deriv
+  !> derivatives of bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: hco3_deriv
+  !> derivatives of carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: co3_deriv
+  !> derivatives of Omega for aragonite, i.e., the aragonite saturation state
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: OmegaA_deriv
+  !> derivatives of Omega for calcite, i.e., the calcite saturation state
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: OmegaC_deriv
 
 ! Local variables
-  REAL(kind=r4) :: ssal, salk, sdic, ssil, sphos
+  REAL(kind=rx) :: ssal, salk, sdic, ssil, sphos
 
-  REAL(kind=r4) :: tempot, tempis68, tempot68
+  TYPE(DUAL_NUM) :: tempot, tempis68, tempot68, tempis90
 ! REAL(kind=r8) :: dtempot, dtempot68
-  REAL(kind=r8) :: drho
+  TYPE(DUAL_NUM) :: drho_sw, drho
 
-  REAL(kind=r8) :: K0, K1, K2, Kb, Kw, Ks, Kf, Kspc
-  REAL(kind=r8) :: Kspa, K1p, K2p, K3p, Ksi
-  REAL(kind=r8) :: St, Ft, Bt
+  TYPE(DUAL_NUM), DIMENSION(1) :: K0, K1, K2, Kb, Kw, Ks, Kf, Kspc
+  TYPE(DUAL_NUM), DIMENSION(1) :: Kspa, K1p, K2p, K3p, Ksi
+  TYPE(DUAL_NUM), DIMENSION(1) :: St, Ft, Bt
 
   REAL(kind=r8), DIMENSION(1) :: aK0, aK1, aK2, aKb, aKw, aKs, aKf, aKspc
   REAL(kind=r8), DIMENSION(1) :: aKspa, aK1p, aK2p, aK3p, aKsi
   REAL(kind=r8), DIMENSION(1) :: aSt, aFt, aBt
 
-  REAL(kind=r8) :: Patmd, Ptot, Rgas_atm, B, Del, xCO2approx, xc2, fugcoeff
+  TYPE(DUAL_NUM), DIMENSION(1) :: Patmd
+  TYPE(DUAL_NUM) :: pd
+  REAL(kind=r8) :: Ptot, Rgas_atm, B, Del, xCO2approx, xc2, fugcoeff
   REAL(kind=r8) :: Phydro_atm
 
   INTEGER :: i, icount
 
-  REAL(kind=r8) :: t, tk, prb
-  REAL(kind=r8) :: s
-  REAL(kind=r8) :: tc, ta
-  REAL(kind=r8) :: sit, pt
+  TYPE(DUAL_NUM), DIMENSION(1) :: t
+  TYPE(DUAL_NUM), DIMENSION(1) :: s
+  TYPE(DUAL_NUM) :: prb
+  TYPE(DUAL_NUM) :: tc, ta
+  TYPE(DUAL_NUM) :: sit, pt
   REAL(kind=r8) :: Hinit
   REAL(kind=r8) :: ah1
 
@@ -220,11 +267,14 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
   REAL(kind=r8), DIMENSION(2) :: dicdel, pco2del
   REAL(kind=r8) :: dx, Rf
-  REAL(kind=r8) :: dph, dpco2, dfco2, dco2, dhco3, dco3, dOmegaA, dOmegaC
+  TYPE(DUAL_NUM) :: dph, dpco2, dfco2, dco2, dhco3, dco3, dOmegaA, dOmegaC
+
+  TYPE (DUAL_NUM),PARAMETER:: zero = DUAL_NUM(0d0 ,(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
 
   INTEGER :: kcomp
   INTEGER :: j, minusplus
-
+  LOGICAL :: l_auto_deriv
+  
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
   CHARACTER(2) :: opKf
@@ -268,6 +318,16 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
     opGAS = 'Pinsitu'
   ENDIF
 
+! Check if we have to compute derivatives
+  l_auto_deriv = (PRESENT(ph_deriv) .OR.       &
+                  PRESENT(pco2_deriv) .OR.     &
+                  PRESENT(fco2_deriv) .OR.     &
+                  PRESENT(co2_deriv) .OR.      &
+                  PRESENT(hco3_deriv) .OR.     &
+                  PRESENT(co3_deriv) .OR.      &
+                  PRESENT(OmegaA_deriv) .OR.   &
+                  PRESENT(OmegaC_deriv) )
+
   icount = 0
   DO i = 1, N
      icount = icount + 1
@@ -298,21 +358,29 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
 !    2) Convert potential T to in-situ T (if input is Tpot, i.e. case for models):
      IF (trim(optT) == 'Tpot' .OR. trim(optT) == 'tpot') THEN
-        tempot = temp(i)
+        tempot = DUAL_NUM(DBLE(temp(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,1.0D0,0.0D0/))
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
 !          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
         tempot68 = (tempot - 0.0002) / 0.99975
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
-        tempis68 = sw_temp(sal(i), tempot68, p(i), 0. )
+        IF (l_auto_deriv) THEN
+!           Salinity (in double precision and with derivatives)
+            s(1) = DUAL_NUM(DBLE(sal(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,1.0D0/))
+!           Pressure (in double precision and with derivatives)
+            pd = DUAL_NUM(DBLE(p(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
+            tempis68 = sw_temp_DNAD(s(1), tempot68, pd, zero )
+        ELSE
+            tempis68 = sw_temp(sal(i), SGLE(tempot68%x_ad_), p(i), SGLE(0.0D0) )
+        ENDIF
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
-        tempis(i) = 0.99975*tempis68 + 0.0002
+        tempis90 = 0.99975*tempis68 + 0.0002
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
-        tempis(i) = temp(i)
-        tempis68  = (temp(i) - 0.0002) / 0.99975
+        tempis90 = DUAL_NUM(DBLE(temp(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,1.0D0,0.0D0/))
+        tempis68  = (tempis90 - 0.0002) / 0.99975
 !       dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
 !       dtempot   = 0.99975*dtempot68 + 0.0002
      ELSE
@@ -320,6 +388,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
+     tempis(i) = tempis90%x_ad_
 
 !    ================================================================
 !    Carbonate chemistry computations
@@ -366,118 +435,195 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
           salk = alk(i)
         ENDIF
 
-!       Absolute temperature (Kelvin) & related variables
-        t  = DBLE(tempis(i))
-        tk = 273.15d0 + t
-
 !       Atmospheric pressure
-        Patmd = DBLE(Patm(i))
+        Patmd(1) = DUAL_NUM(DBLE(Patm(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
 !       Hydrostatic pressure (prb is in bars)
-        prb = DBLE(p(i)) / 10.0d0
-        Phydro_atm = prb / 1.01325d0  ! convert hydrostatic pressure from bar to atm (1.01325 bar / atm)
+        prb = DUAL_NUM(DBLE(p(i)) / 10.0d0,(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
+        Phydro_atm = prb%x_ad_ / 1.01325d0  ! convert hydrostatic pressure from bar to atm (1.01325 bar / atm)
 !       Total pressure [atm]
-        IF     (trim(opGAS) == 'Pzero'     .OR. trim(opGAS) == 'pzero') THEN
-           Ptot = Patmd               ! total pressure (in atm) = atmospheric pressure ONLY
+        IF     (trim(opGAS) == 'Pzero'   .OR. trim(opGAS) == 'pzero') THEN
+           Ptot = Patmd(1)%x_ad_               ! total pressure (in atm) = atmospheric pressure ONLY
         ELSEIF (trim(opGAS) == 'Ppot'    .OR. trim(opGAS) == 'ppot') THEN
-           Ptot = Patmd               ! total pressure (in atm) = atmospheric pressure ONLY
+           Ptot = Patmd(1)%x_ad_               ! total pressure (in atm) = atmospheric pressure ONLY
         ELSEIF (trim(opGAS) == 'Pinsitu' .OR. trim(opGAS) == 'pinsitu') THEN
-           Ptot = Patmd + Phydro_atm   ! total pressure (in atm) = atmospheric pressure + hydrostatic pressure
+           Ptot = Patmd(1)%x_ad_ + Phydro_atm   ! total pressure (in atm) = atmospheric pressure + hydrostatic pressure
         ELSE
            PRINT *, "optGAS must be 'Pzero', 'Ppot', or 'Pinsitu'"
            STOP
         ENDIF
 
-!       Salinity (equivalent array in double precision)
-        s = DBLE(ssal)
+!       Salinity (in double precision and with derivative w/ respect to itelf)
+        s(1) = DUAL_NUM(DBLE(ssal),(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,1.0D0/))
 
-!       Get all equilibrium constants and total concentrations of SO4, F, B
-        CALL constants(aK0, aK1, aK2, aKb, aKw, aKs, aKf, aKspc, aKspa,  &
-                       aK1p, aK2p, aK3p, aKsi,                           &
-                       aSt, aFt, aBt,                                    &
-                       temp(i), sal(i), Patm(i),                         &
-                       depth(i), lat(i), 1,                              &
-                       optT, optP, opB, opK1K2, opKf, opGAS              )
+        IF (l_auto_deriv) THEN
+!           Temperature (Celsius) and its derivatives relative to input variables
+!           (variable 't' used here just for calculation of constants)
+            t(1) = DUAL_NUM(DBLE(temp(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,1.0D0,0.0D0/))
 
-!       Unlike f77, in F90 we can't assign an array (dimen=1) to a scalar in a routine argument
-!       Thus, set scalar constants equal to array (dimension=1) values required as arguments
-        K0 = aK0(1) ; K1 = aK1(1) ; K2 = aK2(1) ; Kb = aKb(1) ; Kw = aKw(1) 
-        Ks = aKs(1) ; Kf = aKf(1) ; Kspc = aKspc(1) ; Kspa = aKspa(1) 
-        K1p = aK1p(1) ; K2p = aK2p(1) ; K3p = aK3p(1) ; Ksi = aKsi(1)
-        St = aSt(1) ; Ft = aFt(1) ; Bt = aBt(1)
+!           Get all equilibrium constants and total concentrations of SO4, F, B
+!           and their derivatives with respect to temperature and salinity
+            CALL constants_DNAD( K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,    &
+                                 K1p, K2p, K3p, Ksi, St, Ft, Bt,            &
+                                 t, s, Patmd,                               &
+                                 depth(i), lat(i), 1,                       &
+                                 optT, optP, opB, opK1K2, opKf, opGAS       )
+        ELSE
+!           Get all equilibrium constants and total concentrations of SO4, F, B
+            CALL constants_alone (aK0, aK1, aK2, aKb, aKw, aKs, aKf,      &
+                        aKspc, aKspa, aK1p, aK2p, aK3p, aKsi,             &
+                        aSt, aFt, aBt,                                    &
+                        temp(i), sal(i), Patm(i),                         &
+                        depth(i), lat(i), 1,                              &
+                        optT, optP, opB, opK1K2, opKf, opGAS              )
 
-!       Compute in-situ density [kg/m^3]
-        rhoSW(i) =  rho(ssal, tempis68, REAL(prb))
+!           Unlike f77, in F90 we can't assign an array (dimen=1) to a scalar in a routine argument
+!           Thus, set scalar constants equal to array (dimension=1) values required as arguments
+            K0(1)%x_ad_   = aK0(1)
+            K1(1)%x_ad_   = aK1(1)
+            K2(1)%x_ad_   = aK2(1)
+            Kb(1)%x_ad_   = aKb(1)
+            Kw(1)%x_ad_   = aKw(1) 
+            Ks(1)%x_ad_   = aKs(1)
+            Kf(1)%x_ad_   = aKf(1)
+            Kspc(1)%x_ad_ = aKspc(1)
+            Kspa(1)%x_ad_ = aKspa(1) 
+            K1p(1)%x_ad_  = aK1p(1)
+            K2p(1)%x_ad_  = aK2p(1)
+            K3p(1)%x_ad_  = aK3p(1)
+            Ksi(1)%x_ad_  = aKsi(1)
+            St(1)%x_ad_   = aSt(1)
+            Ft(1)%x_ad_   = aFt(1)
+            Bt(1)%x_ad_   = aBt(1)
+
+        ENDIF
+
+        IF (l_auto_deriv) THEN
+!           Compute in-situ density [kg/m^3]
+!           and derivatives with respect to temperature and salinity
+            drho_sw = rho_DNAD(s(1), tempis68, prb)
+            rhoSW(i) = drho_sw%x_ad_
+        ELSE
+!           Compute in-situ density [kg/m^3]
+            rhoSW(i) = rho(SGLE(s(1)%x_ad_), SGLE(tempis68%x_ad_), SGLE(prb%x_ad_))
+            drho_sw = DUAL_NUM(DBLE(rhoSW(i)),(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
+        ENDIF
 
 !       Either convert units of DIC and ALK (MODEL case) or not (DATA case)
         IF     (trim(optCON) == 'mol/kg') THEN
-!          No conversion:
+!          No conversion:  drho = 1.
 !          print *,'DIC and ALK already given in mol/kg (std DATA units)'
-           drho = 1.
+           drho = DUAL_NUM(1.0,(/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
         ELSEIF (trim(optCON) == 'mol/m3') THEN
 !          Do conversion:
 !          print *,"DIC and ALK given in mol/m^3 (std MODEL units)"
-           drho = DBLE(rhoSW(i))
+           drho = drho_sw
         ELSE
            PRINT *,"optCON must be either 'mol/kg' or 'mol/m3'"
            STOP
         ENDIF
 
-        tc  = DBLE(sdic)/drho
-        ta  = DBLE(salk)/drho
-        sit = DBLE(ssil)/drho
-        pt  = DBLE(sphos)/drho
+!       Initialise ta, tc, pt and sit and their derivatives 
+        ta  = DUAL_NUM(DBLE(salk),  (/1.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/)) / drho
+        tc  = DUAL_NUM(DBLE(sdic),  (/0.0D0,1.0D0,0.0D0,0.0D0,0.0D0,0.0D0/)) / drho
+        pt  = DUAL_NUM(DBLE(sphos), (/0.0D0,0.0D0,1.0D0,0.0D0,0.0D0,0.0D0/)) / drho
+        sit = DUAL_NUM(DBLE(ssil),  (/0.0D0,0.0D0,0.0D0,1.0D0,0.0D0,0.0D0/)) / drho
 
 !       Solve for pH and all other variables
 !       ------------------------------------
-        CALL varsolver(dph, dpco2, dfco2, dco2, dhco3, dco3, dOmegaA, dOmegaC,     &
-                      t, s, ta, tc, pt, sit,                                       &
-                      Bt, St, Ft,                                                  &
-                      K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi,  & 
-                      Patmd, prb, drho, opGAS                                     )
 
-!       Convert all output variables from double to single precision
-        pH(i)     = REAL(dph)
-        co2(i)    = REAL(dco2)
-        hco3(i)   = REAL(dhco3)
-        co3(i)    = REAL(dco3)
-        fCO2(i)   = REAL(dfCO2)
-        pCO2(i)   = REAL(dpCO2)
-        OmegaA(i) = REAL(dOmegaA)
-        OmegaC(i) = REAL(dOmegaC)
+        IF (l_auto_deriv) THEN
+!           Compute chemical variables and their derivatives
+            CALL varsolver_DNAD(dph, dpco2, dfco2, dco2, dhco3, dco3, dOmegaA, dOmegaC,&
+                        tempis90, s(1), ta, tc, pt, sit,                                       &
+                        Bt(1), St(1), Ft(1),                                         &
+                        K0(1), K1(1), K2(1), Kb(1), Kw(1), Ks(1), Kf(1),             &
+                        Kspc(1), Kspa(1), K1p(1), K2p(1), K3p(1), Ksi(1),            & 
+                        Patmd(1), prb, drho, opGAS                                     )
+        ELSE
+!           Compute chemical variables
+            CALL varsolver(dph%x_ad_, dpco2%x_ad_, dfco2%x_ad_, dco2%x_ad_,          &
+                        dhco3%x_ad_, dco3%x_ad_, dOmegaA%x_ad_, dOmegaC%x_ad_,       &
+                        tempis90%x_ad_, s(1)%x_ad_, ta%x_ad_, tc%x_ad_, pt%x_ad_, sit%x_ad_,   &
+                        aBt(1), aSt(1), aFt(1),                                &
+                        aK0(1), aK1(1), aK2(1), aKb(1), aKw(1), aKs(1), aKf(1),      &
+                        aKspc(1), aKspa(1), aK1p(1), aK2p(1), aK3p(1), aKsi(1),      & 
+                        Patmd(1)%x_ad_, prb%x_ad_, drho%x_ad_, opGAS                   )
+        ENDIF
+
+!       IF NECESSARY, Convert all output variables from double to single precision 
+        pH(i)     = SGLE(dph%x_ad_)
+        co2(i)    = SGLE(dco2%x_ad_)
+        hco3(i)   = SGLE(dhco3%x_ad_)
+        co3(i)    = SGLE(dco3%x_ad_)
+        fCO2(i)   = SGLE(dfCO2%x_ad_)
+        pCO2(i)   = SGLE(dpCO2%x_ad_)
+        OmegaA(i) = SGLE(dOmegaA%x_ad_)
+        OmegaC(i) = SGLE(dOmegaC%x_ad_)
+
+!       Save derivatives that are requested
+        IF (l_auto_deriv) THEN
+            IF (PRESENT(ph_deriv))  THEN
+                ph_deriv(:,i)     = SGLE(dph%xp_ad_)
+            ENDIF
+            IF (PRESENT(pco2_deriv)) THEN
+                pCO2_deriv(:,i)   = SGLE(dpCO2%xp_ad_)
+            ENDIF
+            IF (PRESENT(fco2_deriv)) THEN
+                fCO2_deriv(:,i)   = SGLE(dfCO2%xp_ad_)
+            ENDIF
+            IF (PRESENT(co2_deriv)) THEN
+                co2_deriv(:,i)    = SGLE(dco2%xp_ad_)
+            ENDIF
+            IF (PRESENT(hco3_deriv)) THEN
+                hco3_deriv(:,i)   = SGLE(dhco3%xp_ad_)
+            ENDIF
+            IF (PRESENT(co3_deriv)) THEN
+                co3_deriv(:,i)    = SGLE(dco3%xp_ad_)
+            ENDIF
+            IF (PRESENT(OmegaA_deriv)) THEN
+                OmegaA_deriv(:,i) = SGLE(dOmegaA%xp_ad_)
+            ENDIF
+            IF (PRESENT(OmegaC_deriv)) THEN
+                OmegaC_deriv(:,i) = SGLE(dOmegaC%xp_ad_)
+            ENDIF
+        ENDIF
 
 !       Compute Revelle factor numerically (derivative using centered-difference scheme)
         DO j=1,2
            minusplus = (-1)**j
            dx = 0.1 * 1e-6         ! Numerical tests found for DIC that optimal dx = 0.1 umol/kg (0.1e-6 mol/kg)
-           dicdel(j) = tc + DBLE(minusplus)*dx/2.0d0
-            CALL varsolver(dph, dpco2, dfco2, dco2, dhco3, dco3, dOmegaA, dOmegaC, &
-               t, s, ta, dicdel(j), pt, sit,                                       &
-               Bt, St, Ft,                                                         &
-               K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi,         & 
-               Patmd, prb, drho, optGAS                                            )
-            pco2del(j) = dpco2
+           dicdel(j) = tc%x_ad_ + DBLE(minusplus)*dx/2.0d0
+            CALL varsolver(dph%x_ad_, dpco2%x_ad_, dfco2%x_ad_, dco2%x_ad_,  &
+                dhco3%x_ad_, dco3%x_ad_, dOmegaA%x_ad_, dOmegaC%x_ad_,       &
+                tempis90%x_ad_, s(1)%x_ad_, ta%x_ad_, dicdel(j), pt%x_ad_, sit%x_ad_,  &
+                Bt(1)%x_ad_, St(1)%x_ad_, Ft(1)%x_ad_,                           &
+                K0(1)%x_ad_, K1(1)%x_ad_, K2(1)%x_ad_, Kb(1)%x_ad_, Kw(1)%x_ad_, &
+                Ks(1)%x_ad_, Kf(1)%x_ad_, Kspc(1)%x_ad_, Kspa(1)%x_ad_,          &
+                K1p(1)%x_ad_, K2p(1)%x_ad_, K3p(1)%x_ad_, Ksi(1)%x_ad_,          & 
+                Patmd(1)%x_ad_, prb%x_ad_, drho%x_ad_, opGAS                        )
+            pco2del(j) = dpco2%x_ad_
         END DO
        !Classic finite centered difference formula for derivative (2nd order accurate)
         Rf = (pco2del(2) - pco2del(1)) / (dicdel(2) - dicdel(1))       ! dpCO2/dDIC
        !Rf = (pco2del(2) - pco2del(1)) / (dx)                          ! dpCO2/dDIC (same as just above)
-        Rf = Rf * tc / dpco2                                           ! R = (dpCO2/dDIC) * (DIC/pCO2)
+        Rf = Rf * tc%x_ad_ / dpco2%x_ad_                               ! R = (dpCO2/dDIC) * (DIC/pCO2)
 
-        BetaD(i) = REAL(Rf)
+        BetaD(i) = SGLE(Rf)
 
      ELSE
 
-        ph(i)     = 1.e20_r4
-        pco2(i)   = 1.e20_r4
-        fco2(i)   = 1.e20_r4
-        co2(i)    = 1.e20_r4
-        hco3(i)   = 1.e20_r4
-        co3(i)    = 1.e20_r4
-        OmegaA(i) = 1.e20_r4
-        OmegaC(i) = 1.e20_r4
-        BetaD(i)  = 1.e20_r4
-        rhoSW(i)  = 1.e20_r4
-        p(i)      = 1.e20_r4
-        tempis(i) = 1.e20_r4
+        ph(i)     = 1.e20_rx
+        pco2(i)   = 1.e20_rx
+        fco2(i)   = 1.e20_rx
+        co2(i)    = 1.e20_rx
+        hco3(i)   = 1.e20_rx
+        co3(i)    = 1.e20_rx
+        OmegaA(i) = 1.e20_rx
+        OmegaC(i) = 1.e20_rx
+        BetaD(i)  = 1.e20_rx
+        rhoSW(i)  = 1.e20_rx
+        p(i)      = 1.e20_rx
+        tempis(i) = 1.e20_rx
 
      ENDIF
 

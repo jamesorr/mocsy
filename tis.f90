@@ -19,18 +19,18 @@ SUBROUTINE tis(salt, tempot, press, pressref, N, tempis)
 
 ! INPUT variables
   !> salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !> potential temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: tempot
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: tempot
   !> pressure [db]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: press
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: press
 !f2py optional , depend(salt) :: n=len(salt)
   !> pressure reference level [db]
-  REAL(kind=r4), INTENT(in) :: pressref
+  REAL(kind=rx), INTENT(in) :: pressref
 
 ! OUTPUT variables:
   !> in situ temperature [C] 
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: tempis
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: tempis
 
 ! REAL(kind=r8) :: dsalt, dtempis, dpress, dpressref
 ! REAL(kind=r8) :: dtempot
@@ -38,7 +38,7 @@ SUBROUTINE tis(salt, tempot, press, pressref, N, tempis)
   INTEGER :: i
 
 ! REAL(kind=r8) :: sw_temp
-! REAL(kind=r4) :: sw_temp
+! REAL(kind=rx) :: sw_temp
 ! EXTERNAL sw_temp
 
   DO i = 1,N

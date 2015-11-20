@@ -10,6 +10,12 @@ SUBROUTINE tpot(salt, tempis, press, pressref, N, tempot)
   !    Compute potential temperature from arrays of in situ temp, salinity, and pressure.
   !    Needed because sw_ptmp is a function
 
+#if USE_PRECISION == 2
+#   define SGLE(x)    (x)
+#else
+#   define SGLE(x)    REAL(x)
+#endif
+
   USE msingledouble
   USE msw_ptmp
   IMPLICIT NONE
@@ -19,18 +25,18 @@ SUBROUTINE tpot(salt, tempis, press, pressref, N, tempot)
 
 ! INPUT variables
   !> salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !> in situ temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: tempis
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: tempis
   !> pressure [db]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: press
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: press
 !f2py optional , depend(salt) :: n=len(salt)
   !> pressure reference level [db]
-  REAL(kind=r4), INTENT(in) :: pressref
+  REAL(kind=rx), INTENT(in) :: pressref
 
 ! OUTPUT variables:
   !> potential temperature [C] for pressref
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: tempot
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: tempot
 
   REAL(kind=r8) :: dsalt, dtempis, dpress, dpressref
   REAL(kind=r8) :: dtempot
@@ -48,7 +54,7 @@ SUBROUTINE tpot(salt, tempis, press, pressref, N, tempot)
 
      dtempot   = sw_ptmp(dsalt, dtempis, dpress, dpressref)
 
-     tempot(i) = REAL(dtempot)
+     tempot(i) = SGLE(dtempot)
   END DO
 
   RETURN
