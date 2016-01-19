@@ -1,5 +1,9 @@
 ChangeLog
 
+version 2.1.2, 2016-01-19
+-----------------------------------
+- Added _r4 to some remaining constants in vars.f90
+
 version 2.1.1, 2015-11-20
 -----------------------------------
 - Added _r4 to single-precision temperature-scale conversion constants
