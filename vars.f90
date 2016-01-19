@@ -188,7 +188,6 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
 ! Local variables
   REAL(kind=r4) :: ssal, salk, sdic, ssil, sphos
-
   REAL(kind=r4) :: tempot, tempis68, tempot68
 ! REAL(kind=r8) :: dtempot, dtempot68
   REAL(kind=r8) :: drho
@@ -302,17 +301,17 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
 !          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
-        tempot68 = (tempot - 0.0002) / 0.99975
+        tempot68 = (tempot - 0.0002_r4) / 0.99975_r4
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
-        tempis68 = sw_temp(sal(i), tempot68, p(i), 0. )
+        tempis68 = sw_temp(sal(i), tempot68, p(i), 0.0_r4 )
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
-        tempis(i) = 0.99975*tempis68 + 0.0002
+        tempis(i) = 0.99975_r4*tempis68 + 0.0002_r4
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis(i) = temp(i)
-        tempis68  = (temp(i) - 0.0002) / 0.99975
+        tempis68  = (temp(i) - 0.0002_r4) / 0.99975_r4
 !       dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
 !       dtempot   = 0.99975*dtempot68 + 0.0002
      ELSE
@@ -326,42 +325,42 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !    ================================================================
      IF (dic(i) > 0. .AND. dic(i) < 1.0e+4) THEN
 !       Test to indicate if any of input variables are unreasonable
-        IF (       sal(i) < 0.   &
-             .OR.  alk(i) < 0.   &
-             .OR.  dic(i) < 0.   &
-             .OR.  sil(i) < 0.   &
-             .OR. phos(i) < 0.   &
-             .OR.  sal(i) > 1e+3 &
-             .OR.  alk(i) > 1e+3 &
-             .OR.  dic(i) > 1e+3 &
-             .OR.  sil(i) > 1e+3 &
-             .OR. phos(i) > 1e+3) THEN
+        IF (       sal(i) < 0.0_r4  &
+             .OR.  alk(i) < 0.0_r4  &
+             .OR.  dic(i) < 0.0_r4  &
+             .OR.  sil(i) < 0.0_r4  &
+             .OR. phos(i) < 0.0_r4  &
+             .OR.  sal(i) > 1e+3_r4 &
+             .OR.  alk(i) > 1e+3_r4 &
+             .OR.  dic(i) > 1e+3_r4 &
+             .OR.  sil(i) > 1e+3_r4 &
+             .OR. phos(i) > 1e+3_r4) THEN
            PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
                      i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
         ENDIF
 !       Zero out any negative salinity, phosphate, silica, dic, and alk
-        IF (sal(i) < 0.0) THEN
-           ssal = 0.0
+        IF (sal(i) < 0.0_r4) THEN
+           ssal = 0.0_r4
         ELSE
            ssal = sal(i)
         ENDIF
-        IF (phos(i) < 0.0) THEN
-           sphos = 0.0
+        IF (phos(i) < 0.0_r4) THEN
+           sphos = 0.0_r4
         ELSE
            sphos = phos(i)
         ENDIF
-        IF (sil(i) < 0.0) THEN
-           ssil = 0.0
+        IF (sil(i) < 0.0_r4) THEN
+           ssil = 0.0_r4
         ELSE
            ssil = sil(i)
         ENDIF
-        IF (dic(i) < 0.0) THEN
-          sdic = 0.0
+        IF (dic(i) < 0.0_r4) THEN
+          sdic = 0.0_r4
         ELSE
           sdic = dic(i)
         ENDIF
-        IF (alk(i) < 0.0) THEN
-          salk = 0.0
+        IF (alk(i) < 0.0_r4) THEN
+          salk = 0.0_r4
         ELSE
           salk = alk(i)
         ENDIF
