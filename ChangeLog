@@ -1,5 +1,10 @@
 ChangeLog
 
+version 2.1.3, 2016-01-19
+-----------------------------------
+- Updated scco2 (Schmidt  number Sc for CO2) to use Wanninkhof (2014) formulationc's of O2
+- Added functions to compute Sc's of O2, CFC11, CFC12, SF6 (sco2, sccfc11, ...)
+
 version 2.1.2, 2016-01-19
 -----------------------------------
 - Added _r4 to some remaining constants in vars.f90
