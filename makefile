@@ -79,7 +79,11 @@ endif
 # PROJECT CONFIG, do not put spaced behind the variables
 # ======================================================================
 # mapping between Fortran and C types
-KIND_MAP = kind_map
+ifeq (${PRECISION}, 2)
+    KIND_MAP = kind_map_d
+else
+    KIND_MAP = kind_map_s
+endif
 
 #=======================================================================
 #       List all source files required for the project
@@ -104,6 +108,7 @@ LIBSRC_SOURCES = \
           p2fCO2 \
           f2pCO2 \
           gasx \
+          buffesm2 \
 	  derivnum
 
 # file names
