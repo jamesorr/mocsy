@@ -350,25 +350,95 @@ SUBROUTINE pCO2atm2xCO2(pCO2atm, temp, salt, Patm, N, xCO2)
   RETURN
 END SUBROUTINE pCO2atm2xCO2
 
-!>    Compute Schmidt number for CO2 in seawater from temperature
-FUNCTION scco2(temp)
+!>    Compute Schmidt number for CFC11 in seawater from temperature
+FUNCTION sccfc11(temp)
 
-!  Computes the Schmidt number of CO2 in seawater using the
-!  formulation presented by Wanninkhof (1992, J. Geophys. Res., 97,
-!  7373-7382).  Input is temperature in deg C.
+!  Compute Schmidt number of CFC11 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
+!  Input is temperature in deg C.
 
    USE msingledouble
    IMPLICIT NONE
 
 !  Input & output variables:
    REAL(kind=r8), INTENT(in) :: temp
-!  REAL(kind=r8), INTENT(out) :: scco2
+   REAL(kind=r8) :: sccfc11
+
+   sccfc11 = 3579.2 - 222.63*temp + 7.5749*temp**2 - 0.14595*temp**3  + 0.0011874*temp**4
+   
+   RETURN
+END FUNCTION sccfc11
+
+!>    Compute Schmidt number for CFC12 in seawater from temperature
+FUNCTION sccfc12(temp)
+
+!  Compute Schmidt number of CFC12 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
+!  Input is temperature in deg C.
+
+   USE msingledouble
+   IMPLICIT NONE
+
+!  Input & output variables:
+   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8) :: sccfc12
+
+   sccfc12 = 3828.1 - 249.86*temp + 8.7603*temp**2 - 0.1716*temp**3   + 0.001408*temp**4
+      
+   RETURN
+END FUNCTION sccfc12
+
+!>    Compute Schmidt number for SF6 in seawater from temperature
+FUNCTION scsf6(temp)
+
+!  Compute Schmidt number of SF6 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
+!  Input is temperature in deg C.
+
+   USE msingledouble
+   IMPLICIT NONE
+
+!  Input & output variables:
+   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8) :: scsf6
+
+   scsf6 = 3177.5 - 200.57*temp + 6.8865*temp**2 - 0.13335*temp**3 + 0.0010877*temp**4
+      
+   RETURN
+END FUNCTION scsf6
+
+!>    Compute Schmidt number for CO2 in seawater from temperature
+FUNCTION scco2(temp)
+
+!  Compute Schmidt number of CO2 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
+!  Input is temperature in deg C.
+
+   USE msingledouble
+   IMPLICIT NONE
+
+!  Input & output variables:
+   REAL(kind=r8), INTENT(in) :: temp
    REAL(kind=r8) :: scco2
 
-   scco2 = 2073.1 - 125.62*temp + 3.6276*temp**2 - 0.043219*temp**3
+   scco2 = 2116.8 - 136.25*temp + 4.7353*temp**2 - 0.092307*temp**3 + 0.0007555*temp**4
 
-  RETURN
+   RETURN
 END FUNCTION scco2
+
+!>    Compute Schmidt number for O2 in seawater from temperature
+FUNCTION sco2(temp)
+
+!  Compute Schmidt number of O2 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
+!  Input is temperature in deg C.
+
+   USE msingledouble
+   IMPLICIT NONE
+
+!  Input & output variables:
+   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8) :: sco2
+
+   sco2 = 1920.4 - 135.6*temp  + 5.2122*temp**2 - 0.10939*temp**3  + 0.00093777*temp**4
+
+   RETURN
+END FUNCTION sco2
 
 !>    Compute pCO2atm from arrays of xCO2, in situ T, S, & atm pressure
 SUBROUTINE x2pCO2atm(xCO2, temp, salt, Patm, N, pCO2atm)
