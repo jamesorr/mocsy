@@ -18,7 +18,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !     ================
   !     kw660   = gas transfer velocity (piston velocity) for CO2 [m/s] 
   !               without T-dependant Schmidt number correction
-  !               but accounting for sea ice fraction (See OCMIP2 design & HOWTO documents for details)
+  !               BUT accounting for sea ice fraction (See OCMIP2 design & HOWTO documents for details)
   !     xco2    = atmospheric mole fraction of CO2 [ppm]
   !     Patm    = atmospheric pressure at surface [atm]
   !     dz1     = depth of the top vertical layer of the model [m]
@@ -350,6 +350,47 @@ SUBROUTINE pCO2atm2xCO2(pCO2atm, temp, salt, Patm, N, xCO2)
   RETURN
 END SUBROUTINE pCO2atm2xCO2
 
+!>    Compute piston velolicty kw660 (at 25 C) from wind speed
+SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
+  !    Purpose:
+  !    Compute piston velocity from wind speed, BUT without Schmidt number temperature correction (Sc differs each gas)
+
+  USE msingledouble
+
+  IMPLICIT NONE
+
+  !> number of records
+  INTEGER, intent(in) :: N
+
+! INPUT variables
+  !> wind speed at 10-m height
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
+  !> modeled sea-ice cover: fraction of grid cell, varying between 0.0 (no ice) and 1.0 (full cover)
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
+!f2py optional , depend(windspeed) :: n=len(windspeed)
+
+! OUTPUT variables:
+  !> piston velocity at 25°C [m/s], uncorrected by the Schmidt number for different temperatures
+  REAL(kind=r4), INTENT(out), DIMENSION(N) :: kw660
+
+! LOCAL variables:
+  REAL(kind=r8) :: a, xfac
+
+  INTEGER :: i
+
+! Coefficient from Wanninkhof (2014, Limnol. Oceanograph. Methods, 12, 351-362)
+  a = 0.251d0
+
+! Conversion factor to convert from cm/h to m/s
+  xfac = 0.01d0 / 3600d0
+  
+  DO i = 1,N
+     kw660(i) = a * windspeed(i)**2) * (1.0d0 - Fice) * xfac
+  END DO
+
+  RETURN
+END SUBROUTINE pistonvel
+
 !>    Compute Schmidt number for CFC11 in seawater from temperature
 FUNCTION sccfc11(temp)
 
@@ -423,7 +464,7 @@ FUNCTION scco2(temp)
 END FUNCTION scco2
 
 !>    Compute Schmidt number for O2 in seawater from temperature
-FUNCTION sco2(temp)
+FUNCTION sco2(Tc)
 
 !  Compute Schmidt number of O2 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
 !  Input is temperature in deg C.
@@ -432,10 +473,10 @@ FUNCTION sco2(temp)
    IMPLICIT NONE
 
 !  Input & output variables:
-   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8), INTENT(in) :: Tc
    REAL(kind=r8) :: sco2
 
-   sco2 = 1920.4 - 135.6*temp  + 5.2122*temp**2 - 0.10939*temp**3  + 0.00093777*temp**4
+   sco2 = 1920.4 - 135.6*Tc  + 5.2122*Tc**2 - 0.10939*Tc**3  + 0.00093777*Tc**4
 
    RETURN
 END FUNCTION sco2
@@ -523,4 +564,157 @@ SUBROUTINE vapress(temp, salt, N, vpsw)
   RETURN
 END SUBROUTINE vapress
 
+!>    Compute O2 saturation concentration of surface seawater (mol/m3) at 1 atm (Garcia & Gordon, 1992)
+SUBROUTINE o2sato(T, S, N, o2sat_molm3)
+  !    Purpose:
+  !    Compute O2 saturation concentration of surface seawater (mol/m3) at 1 atm (Garcia & Gordon, 1992)
+  !
+  !    ********************************************************************
+  !    Computes the oxygen saturation concentration at 1 atm total pressure
+  !    in mol/m^3 given sea surface temperature T (deg C) and salinity S (permil) 
+  !
+  !    From: Garcia & Gordon (1992) Oxygen solubility in seawater: better fitting equations,
+  !          Limnol. Oceanogr., 37(6), 1307-1312.
+  !          This routine uses:
+  !          - equation (8) on page 1310
+  !          - coefficients from Table 1, column 2 (Benson & Krause, [cm3/dm3], i.e, same as [ml/L])
+  !
+  !    *** NOTE: The "A3*ts^2" term in the equation (8) in the paper is a TYPO.    ***
+  !    *** It shouldn't be there. It is not used in this routine.                  ***
+  !
+  !    'o2sat' is fit between T(freezing) <= T <= 40(deg C)  and  0 <= S <= 42 permil
+  !
+  !    CHECK VALUE:  T = 10.0 deg C, S = 35.0 permil, 
+  !    o2sat_molm3 = 0.282015 mol/m^3
+  !    ********************************************************************
+
+  USE msingledouble
+  IMPLICIT NONE
+
+  !> number of records
+  INTEGER, intent(in) :: N
+
+! INPUT variables
+  !> surface temperature [C]
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: T
+  !> surface salinity [psu]
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: S
+!f2py optional , depend(temp) :: n=len(temp)
+
+! OUTPUT variables:
+  !> O2 saturation concentration of seawater [mol/m3] 
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: o2sat_molm3
+
+! LOCAL variables:
+  REAL(kind=r8) :: A0, A1, A2, A3, A4, A5
+  REAL(kind=r8) :: B0, B1, B2, B3
+  REAL(kind=r8) :: C0
+  REAL(kind=r8) :: tmp
+  REAL(kind=r8) :: o2sat_mlL 
+  REAL(kind=r8) :: tt, tk, ts, ts2, ts3, ts4, ts5
+
+  DATA A0/ 2.00907   /, A1/ 3.22014   /, A2/ 4.05010 /,  &
+       A3/ 4.94457   /, A4/-2.56847E-1/, A5/ 3.88767 /
+  DATA B0/-6.24523E-3/, B1/-7.37614E-3/, B2/-1.03410E-2/, B3/-8.17083E-3/
+  DATA C0/-4.88682E-7/
+      
+  DO i = 1, N
+      tt  = 298.15 - T(i)
+      tk  = 273.15 + T(i)
+      ts  = LOG(tt/tk)
+
+      ts2 = ts**2
+      ts3 = ts**3
+      ts4 = ts**4
+      ts5 = ts**5
+
+!     O2 saturation concentration (ml/L) 
+      tmp  = A0 + A1*ts + A2*ts2 + A3*ts3 + A4*ts4 + A5*ts5  &
+               + S(i)*(B0 + B1*ts + B2*ts2 + B3*ts3)         &
+               + C0*(S(i)*S(i))
+      o2sat_mlL = EXP(tmp)
+
+!     Convert from ml/L to mol/m^3
+      o2sat_molm3(i) = o2sat_mlL / 22391.6*1000.0
+  END DO
+   
+  RETURN
+END SUBROUTINE o2sato
+
+!>    Compute time rate of change of O2 in the surface layer due to air-sea gas exchange [mol/(m^3 *s)].
+SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
+
+  !    **********************************************************************
+  !    Purpose: Compute time rate of change of O2 in the surface layer due to air-sea gas exchange [mol/(m^3 *s)]
+  !
+  !    Input:
+  !      T       model surface temperature (deg C)
+  !      S       model surface salinity (permil)
+  !      kw660   gas transfer velocity at a Schmidt number of 660, accounting
+  !              for sea ice fraction (m/s)
+  !      ppo     surface pressure divided by 1 atm.
+  !      o2      surface ocean O2 concentration (mol/m^3)
+  !      dz1     thickness of surface grid box (m)
+
+  !    Output:
+  !      o2ex    time rate of change of oxygen in the surface layer due
+  !              to air-sea exchange (mol/m^3/s)
+  !
+  !    Two routines are called:
+  !      sco2   - function to compute Schmidt number of oxygen
+  !      o2sato - subroutine to compute oxygen saturation concentration at 1 atm (mol/m^3)
+  !
+  !    Numbers in brackets refer to equation numbers in OCMIP2 simulation design document
+  !
+  !    Original for OCMIP2: Ray Najjar, 29 January 1999
+  !    Modified for OMIP:   James Orr, LSCE/IPSL France, 14 March 2015
+  !    **********************************************************************
+
+  USE msingledouble
+  IMPLICIT NONE
+
+  !> number of records
+  INTEGER, intent(in) :: N
+
+! INPUT variables
+  !> sea surface temperature [C]
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: T
+  !> sea surface salinity [psu]
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: S
+  !> gas transfer velocity at a Schmidt number of 660, accounting for sea ice fraction [m/s]
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: kw660
+  !> surface atmospheric pressure [atm]
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: ppo
+  !> modeled surface ocean dissolved O2 concentration [mol/m^3]
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: o2
+  !> thickness of surface grid box [m]
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: dz1
+!f2py optional , depend(temp) :: n=len(temp)
+
+! OUTPUT variables:
+  !> rate of change of dissolved O2 in the surface layer due to air-sea O2 exchange [mol/(m^3*s)]
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: o2ex
+
+! LOCAL variables:
+  REAL(kind=r8) :: kwo2
+  REAL(kind=r8), DIMENSION(N) :: o2sat_1atm
+
+! Dissolved O2 saturation concentraion [mol/m^3] (in equilibrium with atmosphere) at 1 atm pressure 
+  CALL o2sato(T, S, N, o2sat_1atm)
+
+  DO i = 1, N
+!     Transfer velocity for O2 in m/s [4]
+      kwo2 = (kw660(i) * (660/sco2(T))**0.5)
+      
+!     O2 saturation concentration at given atm pressure [3]
+      o2sat = o2sat_1atm(i) * ppo(i)
+
+!     Time rate of change of surface dissolved O2 due to gas exchange (mol/(m3 * s) [1]
+      o2ex(i) = kwo2*(o2sat(i) - o2(i)) / dz1(i)
+  END DO
+
+  RETURN
+END SUBROUTINE o2flux
+
 END MODULE gasx
+
