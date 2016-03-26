@@ -105,11 +105,13 @@ LIBSRC_SOURCES = \
           constants \
           varsolver \
           vars \
+          derivauto \
+          derivnum \
+          errors \
           p2fCO2 \
           f2pCO2 \
-          gasx \
           buffesm2 \
-	  derivnum
+          gasx
 
 # file names
 LIBSRC_FILES = $(addsuffix .f90,${LIBSRC_SOURCES})
@@ -142,7 +144,7 @@ LIBSRC_WRAP_FPP_FILES = $(addsuffix .fpp,${LIBSRC_WRAP_SOURCES})
 #=======================================================================
 
 # List of executables to be built within the package
-PROGRAMS = libmocsy.a test_mocsy test_vars _mocsy.so
+PROGRAMS = libmocsy.a test_mocsy _mocsy.so
 
 # "make" builds all
 all: $(PROGRAMS)
@@ -161,13 +163,16 @@ $(library):  $(LIBSRC_OBJECTS)
 $(EXEC): $(LIBSRC_OBJECTS) test_mocsy.o $(library) 
 	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
-test_vars:  $(LIBSRC_OBJECTS) test_vars.o $(library) 
+test_errors:  $(LIBSRC_OBJECTS) test_errors.o $(library) 
 	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
 test_derivauto:  $(LIBSRC_OBJECTS) test_derivauto.o $(library) 
 	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
 test_derivnum:  $(LIBSRC_OBJECTS) test_derivnum.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+test_buffesm2:  $(LIBSRC_OBJECTS) test_buffesm2.o $(library) 
 	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
 #=======================================================================

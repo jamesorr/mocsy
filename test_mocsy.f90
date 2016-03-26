@@ -5,6 +5,7 @@ PROGRAM test_mocsy
    USE msingledouble
    USE mconstants
    USE mvars
+   USE mderivauto
 
    IMPLICIT NONE
 
@@ -14,7 +15,7 @@ PROGRAM test_mocsy
 !  "vars" Input variables
    INTEGER :: N
    REAL(kind=rx), DIMENSION(100) :: temp, sal, alk, dic, sil, phos, Patm, depth, lat
-   REAL(kind=rx), DIMENSION(6,100) :: ph_deriv, pco2_deriv, OmegaA_deriv
+   REAL(kind=rx), DIMENSION(6,100) :: ph_deriv, pco2_deriv, fco2_deriv, co2_deriv, hco3_deriv, co3_deriv, OmegaA_deriv, OmegaC_deriv
    REAL(kind=rx) ::  gamma_DIC, gamma_Alk, beta_DIC, beta_Alk, omega_DIC, omega_Alk
 !  "vars" Input options
    CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2
@@ -89,8 +90,13 @@ PROGRAM test_mocsy
 
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,         &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                             &  ! INPUT
-             optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2, optKf='dg',&
-             ph_deriv=ph_deriv, pco2_deriv=pco2_deriv, OmegaA_deriv=OmegaA_deriv)     ! INPUT OPTIONS
+             optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2, optKf='dg')     ! INPUT OPTIONS
+
+   call derivauto(ph_deriv, pco2_deriv, fco2_deriv, co2_deriv, hco3_deriv, co3_deriv,         &
+             OmegaA_deriv, OmegaC_deriv,                                                      &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                             &  ! INPUT
+             optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2, optKf='dg')     ! INPUT OPTIONS
+             
 !  Print out results (typical for data: concentration units differ)
    write(*,50)
    write(*,200)
@@ -109,15 +115,15 @@ PROGRAM test_mocsy
      OmegaA(i), OmegaC(i), BetaD(i), rhoSW(i), p(i), tempis(i),     &
      gamma_DIC, gamma_Alk, beta_DIC, beta_Alk, omega_DIC, omega_Alk
    end do
+   write(*,51)
 
-   call constants (K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,                &
+   call constants (K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,                  &
                      K1p, K2p, K3p, Ksi,                                    &
                      St, Ft, Bt,                                            &
                      temp, sal, Patm,                                       &
                      depth, lat, 6,                                         &
                      optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2, optKf='dg',  &
-                     K0_deriv=K0_deriv, Kb_deriv=Kb_deriv,                &
-                     Kspa_deriv=Kspa_deriv )
+                     K0_deriv=K0_deriv, Kb_deriv=Kb_deriv, Kspa_deriv=Kspa_deriv )
    
 !  Print out derivatives of thermodynamic constants
    write(*,50)
@@ -126,26 +132,28 @@ PROGRAM test_mocsy
      write(*,301) K0(i), K0_deriv(1,i), K0_deriv(2,i), Kb(i), Kb_deriv(1,i), Kb_deriv(2,i),    &
         Kspa(i), Kspa_deriv(1,i), Kspa_deriv(2,i)
    end do
+   write(*,52)
    
    
   50 format(/)
-  51 format(105('-'))
+  51 format(179('-'))
+  52 format(106('-'))
 
 
  200 format('Typical DATA output',                                                                              / &
-            105('-'),                                                                                                    / &
+            179('-'),                                                                                                    / &
             '                                                                               in situ         in situ',    / &
             '  pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature', &
-            ' gamma_DIC  gamma_Alk  beta_DIC  beta_Alk  omega_DIC omega_Alk', / &
+            ' gamma_DIC  gamma_Alk     beta_DIC     beta_Alk    omega_DIC     omega_Alk', / &
             '(total) (uatm) (uatm)  (mol/kg)    (mol/kg)     (mol/kg)                       (kg/m3) (db)      (C)',      / &
-            105('-')                                                                                                     )
+            179('-')                                                                                                     )
 
  201 format(f7.4, 2f7.1, 3(e12.4), 3f7.2, f8.2, f7.1, f8.3, 6f13.9)
 
  300 format('Constants and their derivatives',                                                   / &
-            105('-'),                                                                                                    / &
+            106('-'),                                                                                                    / &
             '  K0        dK0/dT       dK0/dS       Kb        dKb/dT      dKb/dS       Kspa       dKspa/dT    dKspa/dT', / &
-            105('-')                                                                                                     )
+            106('-')                                                                                                     )
 
  301 format(f10.7, 8(e12.4, e12.4) )
 

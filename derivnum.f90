@@ -8,7 +8,7 @@ CONTAINS
 
 !>    Computes numerical derivatives of standard carbonate system variables  
 !>    (H+, pCO2, fCO2, CO2*, HCO3- and CO3--, OmegaA, OmegaC) with respect to one given input variable
-!!    FROM
+!!    Input variables are :
 !!    temperature, salinity, pressure,
 !!    total alkalinity (ALK), dissolved inorganic carbon (DIC),
 !!    silica and phosphate concentrations
@@ -42,8 +42,10 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !             =           [mol/kg]  with optCON = 'mol/kg'
   !     phos    = phosphate [mol/m^3] with optCON = 'mol/m3'
   !             =           [mol/kg]  with optCON = 'mol/kg'
-  !     derivar = 3-character identifier of input variable with respect to which derivative is requested
-  !               possibilities are 'alk', 'dic', 'pho', 'sil', 'tem', or 'sal'
+  !     derivar = 3-lowercase-character identifier of input variable with respect to which derivative is requested
+  !               possibilities are 'alk', 'dic', 'pho', 'sil', 'tem', 'sal'
+  !               and dissociation constants 'k0', 'k1', 'k2', 'kw', 'kb', 'ka', 'kc'
+  !               The last one are the constants of solubility product for Aragonite and Calcite
   !
   !     INPUT options:
   !     ==============
@@ -235,7 +237,14 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   CHARACTER(7) :: opGAS
 
   INTEGER :: i
+  LOGICAL :: deriv_K    !  if one derives with respect to a dissoc constant
+  INTEGER :: var_index  ! index of variable with respect to which one derives
 
+! Approximate values for K0, K1, K2, Kb, Kspa and Kspc
+! They will be used to compute an absolute perturbation value on these constants
+  REAL,PARAMETER :: K_values(7) = (/0.034, 1.2e-06, 8.3e-10, 2.1e-09, 6.1e-14, 6.7e-07, 4.3e-07/)
+
+  
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
 !        the !f2py statements that precede each type declaraion
@@ -273,6 +282,52 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
     opGAS = 'Pinsitu'
   ENDIF
 
+  SELECT CASE (derivar)
+      CASE ('alk')
+          var_index = 1
+          deriv_K   = .FALSE.
+      CASE ('dic')
+          var_index = 2
+          deriv_K   = .FALSE.
+      CASE ('pho')
+          var_index = 3
+          deriv_K   = .FALSE.
+      CASE ('sil')
+          var_index = 4
+          deriv_K   = .FALSE.
+      CASE ('tem')
+          var_index = 5
+          deriv_K   = .FALSE.
+      CASE ('sal')
+          var_index = 6
+          deriv_K   = .FALSE.
+      CASE ('k0')
+          var_index = 1
+          deriv_K   = .TRUE.
+      CASE ('k1')
+          var_index = 2
+          deriv_K   = .TRUE.
+      CASE ('k2')
+          var_index = 3
+          deriv_K   = .TRUE.
+      CASE ('kb')
+          var_index = 4
+          deriv_K   = .TRUE.
+      CASE ('kw')
+          var_index = 5
+          deriv_K   = .TRUE.
+      CASE ('ka')
+          var_index = 6
+          deriv_K   = .TRUE.
+      CASE ('kc')
+          var_index = 7
+          deriv_K   = .TRUE.
+      CASE DEFAULT
+          PRINT *,"derivar must be 3-char variable: 'alk', 'dic', 'pho', 'sil', 'tem', or 'sal'"
+          PRINT *," or a 2-char dissoc. constant name : 'k0', 'k1', 'k2', 'kb', 'kw', 'ka', 'kc'"
+          STOP
+  END SELECT
+  
   DO i = 1, N
   
     ! Copy input values
@@ -286,100 +341,116 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
     adepth(1) = depth(i)
     alat(1)   = lat(i)
 
-    ! Select input value to vary slightly
-    ! values for individual rel_delta_x determined by minimizing difference
-    ! between numerical derivatives and mocsy-dnad automatic derivatives
-    ! (mocsy_dnad), which gives results as good as analytic solutions
-    SELECT CASE (derivar)
-        CASE ('alk')
-            input_value = alk(i)
-            rel_delta_x = 1.0d-6
-        CASE ('dic')
-            input_value = dic(i)
-            rel_delta_x = 1.0d-6
-        CASE ('pho')
-            input_value = phos(i)
-            rel_delta_x = 1.0d-3
-        CASE ('sil')
-            input_value = sil(i)
-            rel_delta_x = 1.0d-3
-        CASE ('tem')
-            input_value = temp(i)
-            rel_delta_x = 1.0d-4
-        CASE ('sal')
-            input_value = sal(i)
-            rel_delta_x = 1.0d-4
-        CASE DEFAULT
-            PRINT *,"derivar must be 3-char variable: 'alk', 'dic', 'pho', 'sil', 'tem', or 'sal'"
-            STOP
-    END SELECT
-    ! Determine two slightly different values of selected input value
-    abs_delta = input_value * rel_delta_x
-    ainput1(1) = input_value - abs_delta
-    ainput2(1) = input_value + abs_delta
-    ! Compute total absolue delta
-    dX = ainput2(1) - ainput1(1)
+    IF (deriv_K) THEN
+        ! Choose value of absolute perturbation
+        abs_delta = K_values(var_index) * 1.d-3   ! 0.1 percent of Kx value
+        dx = 2 * abs_delta
     
-    ! Call routine vars() twice with two slightly different values of selected input
-    SELECT CASE (derivar)
-        CASE ('alk')
-            call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
-                            OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, ainput1, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-            call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
-                            OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, ainput2, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-        CASE ('dic')
-            call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
-                            OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, aalk, ainput1, asil, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-            call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
-                            OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, aalk, ainput2, asil, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-        CASE ('pho')
-            call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
-                            OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, aalk, adic, asil, ainput1, aPatm, adepth, alat, 1,       &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-            call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
-                            OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, aalk, adic, asil, ainput2, aPatm, adepth, alat, 1,       &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-        CASE ('sil')
-            call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
-                            OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, aalk, adic, ainput1, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-            call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
-                            OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
-                            atemp, asal, aalk, adic, ainput2, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-        CASE ('tem')
-            call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
-                            OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
-                            ainput1, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-            call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
-                            OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
-                            ainput2, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-        CASE ('sal')
-            call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
-                            OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
-                            atemp, ainput1, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-            call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
-                            OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
-                            atemp, ainput2, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                            optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
-        CASE DEFAULT
-            PRINT *,"derivar must be 3-char variable: 'alk', 'dic', 'pho', 'sil', 'tem', or 'sal'"
-            STOP
-    END SELECT
+        ! Call routine vars_pertK() with request to increase one K value
+        call vars_pertK(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),      &
+                        OmegaA(:,1), OmegaC(:,1),                                          &
+                        atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                        var_index, -abs_delta,                                              &
+                        optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+        ! Call routine vars_pertK() with request to decrease the same K value
+        call vars_pertK(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),      &
+                        OmegaA(:,2), OmegaC(:,2),                                          &
+                        atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                        var_index, abs_delta,                                             &
+                        optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+
+    ELSE    ! we do NOT derive w/ respect to one of the  Ks
+    
+        ! Select input value to vary slightly
+        ! values for individual rel_delta_x determined by minimizing difference
+        ! between numerical derivatives and mocsy-dnad automatic derivatives
+        ! (mocsy_dnad), which gives results as good as analytic solutions
+        SELECT CASE (var_index)
+            CASE (1)
+                input_value = alk(i)
+                rel_delta_x = 1.0d-6
+            CASE (2)
+                input_value = dic(i)
+                rel_delta_x = 1.0d-6
+            CASE (3)
+                input_value = phos(i)
+                rel_delta_x = 1.0d-3
+            CASE (4)
+                input_value = sil(i)
+                rel_delta_x = 1.0d-3
+            CASE (5)
+                input_value = temp(i)
+                rel_delta_x = 1.0d-4
+            CASE (6)
+                input_value = sal(i)
+                rel_delta_x = 1.0d-4
+        END SELECT
+
+        ! Determine two slightly different values of selected input value
+        abs_delta = input_value * rel_delta_x
+        ainput1(1) = input_value - abs_delta
+        ainput2(1) = input_value + abs_delta
+        ! Compute total absolue delta
+        dX = ainput2(1) - ainput1(1)
+    
+        ! Call routine vars() twice with two slightly different values of selected input
+        SELECT CASE (var_index)
+            CASE (1)
+                call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
+                                OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, ainput1, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
+                                OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, ainput2, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+            CASE (2)
+                call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
+                                OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, aalk, ainput1, asil, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
+                                OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, aalk, ainput2, asil, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+            CASE (3)
+                call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
+                                OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, aalk, adic, asil, ainput1, aPatm, adepth, alat, 1,       &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
+                                OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, aalk, adic, asil, ainput2, aPatm, adepth, alat, 1,       &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+            CASE (4)
+                call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
+                                OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, aalk, adic, ainput1, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
+                                OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
+                                atemp, asal, aalk, adic, ainput2, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+            CASE (5)
+                call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
+                                OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
+                                ainput1, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
+                                OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
+                                ainput2, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+            CASE (6)
+                call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
+                                OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
+                                atemp, ainput1, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
+                                OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
+                                atemp, ainput2, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+        END SELECT
+    ENDIF
     
     ! H+ concentration from ph
     h(1,1) = 10**(-ph(1,1))

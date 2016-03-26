@@ -43,12 +43,12 @@ PROGRAM test_derivauto
 !> Simple input data (with CONCENTRATION units typical for DATA)
 !> (based on observed average surface concentrations from S. Ocean (south of 60°S)--GLODAP and WOA2009)
    DO i = 1,1
-     temp(i)   = 20.0            !Can be "Potential temperature" or "In situ temperature" (see optT below)
+     temp(i)   = 18.0            !Can be "Potential temperature" or "In situ temperature" (see optT below)
      sal(i)    = 35.0           !Salinity (practical scale)
      alk(i)    = 2300.*1.e-6      ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
      dic(i)    = 2000.*1.e-6      ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
-     sil(i)    = 0.
-     phos(i)   = 0.
+     sil(i)    = 0.*1.e-6
+     phos(i)   = 0.*1.e-6
      depth(i) = 0.
      Patm(i)   = 1.0            !Atmospheric pressure (atm)
      N = i
@@ -56,7 +56,7 @@ PROGRAM test_derivauto
 
    call vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,         &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,                             &  ! INPUT
-             optCON='mol/kg', optT='Tinsitu', optP='db', &
+             optCON='mol/kg', optT='Tinsitu', optP='db', optB=optB, optK1K2=optK1K2, optKf=optKf,  &
              ph_deriv=ph_deriv, pco2_deriv=pco2_deriv, fco2_deriv=fco2_deriv, co2_deriv=co2_deriv, &
              hco3_deriv=hco3_deriv, co3_deriv=co3_deriv, omegaa_deriv=omegaa_deriv, omegac_deriv=omegac_deriv)
 
@@ -72,7 +72,7 @@ PROGRAM test_derivauto
     write (*,*) "dH/dx   dpCO2/dx   dfCO2/dx   d[CO2*]/dx   d[HCO3-]/dx   d[CO3--]/dx   dOmegaA/dx  dOmegaC/dx"
     
     DO i = 1,6
-       write (*,*) invar(i), H_deriv(i), pco2_deriv(i,1), fco2_deriv(i,1), co2_deriv(i,1), hco3_deriv(i,1), &
+       write (*,"(A3, 8ES15.6)") invar(i), H_deriv(i), pco2_deriv(i,1), fco2_deriv(i,1), co2_deriv(i,1), hco3_deriv(i,1), &
        co3_deriv(i,1), omegaa_deriv(i,1), omegac_deriv(i,1)
     END DO
     
