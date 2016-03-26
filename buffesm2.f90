@@ -102,11 +102,6 @@ SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf
   !     omegaALK = (d ln Omega / dAlk)^-1
   !     Rf =   dpCO2/pCO2 / dDIC/DIC    (i.e., the Revelle factor, unitless)
 
-#if USE_PRECISION == 2
-#   define SGLE(x)    (x)
-#else
-#   define SGLE(x)    REAL(x)
-#endif
 
   USE msingledouble
   USE mconstants
@@ -222,6 +217,8 @@ SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf
   REAL(kind=r8) :: sioh4, sioh3
   REAL(kind=r8) :: Pt, Sit
   REAL(kind=r8) :: Pegle, Segle, Qegle
+  REAL(kind=r8) :: SegleCBW, SeglePt, SegleSit
+  
   INTEGER :: i
 
 ! Get equilibrium constants and total concentrations of SO4, F, B
@@ -284,19 +281,49 @@ SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf
       
         !Segle: (1) corrected from sign error in Egleston et al., and (2) modified to account for P & Si acid systems
         !------------------------------------------------------------------------------------------------------------
-        !Segle  =   hco3(i) + 4*co3(i) + (h*Borate/(Kb(i) + h)) + h + oh   !Corrected form of Egleston et al (2010) - but no P & Si acid systems
-
+         !Segle  =   hco3(i) + 4*co3(i) + (h*Borate/(Kb(i) + h)) + h + oh   !Formula from Egleston et al (2010) with corrected sign error
+                                                                            !Egleston et al ignore P & Si acid systems!
+        !REMEDY:
         !Separate Segle into 3 parts:
-        ! - contribution of C, B, and water systems
-        ! - contribution of total phosphate     (from J.-M. Epitalon)
-        ! - contribution of total silicon       (from J.-M. Epitalon)
-         Segle  = ( hco3(i) + 4*co3(i) + (h*Borate/(Kb(i) + h)) + h + oh   & 
-                    + (- h3po4 * (-h2po4 - 2*hpo4 - 3*po4)                 &
+        ! SegleCBW: contribution of C, B, and water systems (only part accounted for by Egleston et al.)
+        ! SeglePt:  contribution of total phosphate     (from J.-M. Epitalon)
+        ! SegleSit: contribution of total silicon       (from J.-M. Epitalon)
+
+!         Segle  = hco3(i) + 4*co3(i) + (h*Borate/(Kb(i) + h)) + h + oh     & 
+!                    + (- h3po4 * (-h2po4 - 2*hpo4 - 3*po4)                 &
+!                       + hpo4  * (2*h3po4 + h2po4 - po4)                   &
+!                       + 2*po4 * (3*h3po4 + 2*h2po4 + hpo4)                &
+!                      ) / Pt                                               &
+!                    + h * sioh3/(Ksi(i) + h)                               &   
+!                  )
+
+         ! Part 1: Carbon, Boron, Water
+         SegleCBW = hco3(i) + 4*co3(i) + (h*Borate/(Kb(i) + h)) + h + oh
+
+         ! Part 2: Phosphorus
+         IF (Pt .eq. 0.0d0) THEN
+            SeglePt = 0.0
+         ELSE
+            SeglePt = (- h3po4 * (-h2po4 - 2*hpo4 - 3*po4)                 &
                        + hpo4  * (2*h3po4 + h2po4 - po4)                   &
                        + 2*po4 * (3*h3po4 + 2*h2po4 + hpo4)                &
-                      ) / Pt                                               &
-                    + h * sioh3/(Ksi(i) + h)                                  &   
-                  )
+                      ) / Pt
+         ENDIF
+
+         ! Part 3: Silicon
+         IF (Sit .EQ. 0.0d0) THEN
+            SegleSit = 0.0
+         ELSE
+            SegleSit = h * sioh3/(Ksi(i) + h)                           
+         ENDIF
+
+!        Add the 3 parts of Segle
+         Segle  = SegleCBW + SeglePt + Segle
+
+         !print *, 'hco3, co3, h, Borate, Kb, oh = ', hco3(i), co3(i), h, Borate, Kb(i), oh 
+         !print *, 'h3po4, h2po4, hpo4, po4 =', h3po4, h2po4, hpo4, po4
+         !print *, 'Pt = ', Pt
+         !print *, 'sioh3, Ksi =', sioh3, Ksi(i)
 
          Pegle  = 2*co2(i) + hco3(i)                                  
          Qegle  = 2*Alkc - Segle                                 
@@ -313,7 +340,8 @@ SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf
          omegaALK(i) = Alkc - dic(i) * Qegle/Pegle                     
 
          Rf = dic(i) / gammaDIC
-
+         !print *, 'Segle, Pegle, Qegle = ', Segle, Pegle, Qegle
+         !print *, 'i, gammaDIC(i) = ', i, gammaDIC(i)
       ENDIF
    END DO
 
