@@ -173,21 +173,21 @@ SUBROUTINE derivauto(ph_deriv, pco2_deriv, fco2_deriv, co2_deriv, hco3_deriv, co
 
 ! Output variables:
   !> derivatives of pH on the <b>total scale</b>
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: ph_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: ph_deriv
   !> derivatives of CO2 partial pressure <b>[uatm]</b>
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: pco2_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: pco2_deriv
   !> derivatives of CO2 fugacity <b>[uatm]</b>
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: fco2_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: fco2_deriv
   !> derivatives of aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optCON
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: co2_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: co2_deriv
   !> derivatives of bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: hco3_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: hco3_deriv
   !> derivatives of carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: co3_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: co3_deriv
   !> derivatives of Omega for aragonite, i.e., the aragonite saturation state
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: OmegaA_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: OmegaA_deriv
   !> derivatives of Omega for calcite, i.e., the calcite saturation state
-  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(6,N) :: OmegaC_deriv
+  REAL(kind=rx), INTENT(out), DIMENSION(6,N) :: OmegaC_deriv
 
 ! Local variables
   !> pressure <b>[decibars]</b>; p = f(depth, latitude) if computed from depth [m] (when optP='m') OR p = depth [db] (when optP='db')
