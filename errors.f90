@@ -78,6 +78,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
   
 ! Input variables
   !>     number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
@@ -512,7 +513,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
   IF (any (epK_local .NE. 0)) THEN
   
       ! Get all equilibrium constants and total concentrations of SO4, F, B
-      CALL constants_alone (K0, K1, K2, Kb, Kw, Ks, Kf,          &
+      CALL constants (K0, K1, K2, Kb, Kw, Ks, Kf,          &
                   Kspc, Kspa, K1p, K2p, K3p, Ksi, St, Ft, Bt,    &
                   temp, sal, Patm, depth, lat, N,                &
                   optT, optP, opB, opK1K2, opKf, opGAS        )

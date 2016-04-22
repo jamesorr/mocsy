@@ -18,6 +18,7 @@ SUBROUTINE p2fCO2(pCO2, temp, Patm, p, N, fCO2)
   IMPLICIT NONE
 
   !> number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
 
 ! INPUT variables
@@ -29,7 +30,6 @@ SUBROUTINE p2fCO2(pCO2, temp, Patm, p, N, fCO2)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> hydrostatic pressure [db]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: p
-!f2py optional , depend(pCO2) :: n=len(pCO2)
 
 ! OUTPUT variables:
   !> fugacity of CO2 [uatm] 

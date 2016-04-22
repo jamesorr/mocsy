@@ -114,6 +114,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 
 ! Input variables
   !>     number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
@@ -128,7 +129,6 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: sil
   !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: phos
-!f2py optional , depend(sal) :: n=len(sal)
   !> gas transfer velocity (piston velocity) at a Schmidt number of 660 <b>[m/s]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: kw660
   !> atmospheric mole fraction of CO2 <b>[ppm]</b>

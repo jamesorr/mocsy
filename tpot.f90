@@ -21,6 +21,7 @@ SUBROUTINE tpot(salt, tempis, press, pressref, N, tempot)
   IMPLICIT NONE
 
   !> number of records
+!f2py intent(hide) n
   INTEGER, intent(in) :: N
 
 ! INPUT variables
@@ -30,7 +31,6 @@ SUBROUTINE tpot(salt, tempis, press, pressref, N, tempot)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: tempis
   !> pressure [db]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: press
-!f2py optional , depend(salt) :: n=len(salt)
   !> pressure reference level [db]
   REAL(kind=rx), INTENT(in) :: pressref
 

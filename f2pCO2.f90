@@ -18,6 +18,7 @@ SUBROUTINE f2pCO2(fCO2, temp, Patm, p, N, pCO2)
   IMPLICIT NONE
 
   !> number of records
+!f2py intent(hide) n
   INTEGER, intent(in) :: N
 
 ! INPUT variables
@@ -29,7 +30,6 @@ SUBROUTINE f2pCO2(fCO2, temp, Patm, p, N, pCO2)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> hydrostatic pressure [db]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: p
-!f2py optional , depend(pCO2) :: n=len(pCO2)
 
 ! OUTPUT variables:
   !> oceanic partial pressure of CO2 [uatm] 

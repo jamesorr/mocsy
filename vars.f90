@@ -118,6 +118,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 
 ! Input variables
   !>     number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
@@ -383,7 +384,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         s = DBLE(ssal)
 
 !       Get all equilibrium constants and total concentrations of SO4, F, B
-        CALL constants_alone (aK0, aK1, aK2, aKb, aKw, aKs, aKf,      &
+        CALL constants (aK0, aK1, aK2, aKb, aKw, aKs, aKf,            &
                     aKspc, aKspa, aK1p, aK2p, aK3p, aKsi,             &
                     aSt, aFt, aBt,                                    &
                     temp(i), sal(i), Patm(i),                         &
@@ -523,6 +524,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
 
 ! Input variables
   !>     number of records
+!f2py optional , depend(sal) :: n=len(sal)
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
@@ -537,7 +539,6 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: sil
   !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: phos
-!f2py optional , depend(sal) :: n=len(sal)
   !> atmospheric pressure <b>[atm]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> depth in \b meters (when optP='m') or \b decibars (when optP='db')
@@ -785,7 +786,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
         s = DBLE(ssal)
 
 !       Get all equilibrium constants and total concentrations of SO4, F, B
-        CALL constants_alone (aK0, aK1, aK2, aKb, aKw, aKs, aKf,      &
+        CALL constants (aK0, aK1, aK2, aKb, aKw, aKs, aKf,            &
                     aKspc, aKspa, aK1p, aK2p, aK3p, aKsi,             &
                     aSt, aFt, aBt,                                    &
                     temp(i), sal(i), Patm(i),                         &

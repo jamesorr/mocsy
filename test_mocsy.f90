@@ -55,14 +55,6 @@ PROGRAM test_mocsy
   !! from either Uppstrom (1974) or Lee et al. (2010), depending on optB
   REAL(kind=r8), DIMENSION(6) :: Bt
 
-! Derivatives with respect to temperature and salinity (in this order)
-  !> derivatives of K0
-  REAL(kind=r8), DIMENSION(2,6) :: K0_deriv
-  !> derivatives of Kb
-  REAL(kind=r8), DIMENSION(2,6) :: Kb_deriv
-  !> derivatives of Kspa
-  REAL(kind=r8), DIMENSION(2,6) :: Kspa_deriv
-
 !  Local variables:
    INTEGER :: i
 
@@ -117,27 +109,27 @@ PROGRAM test_mocsy
    end do
    write(*,51)
 
-   call constants (K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,                  &
-                     K1p, K2p, K3p, Ksi,                                    &
-                     St, Ft, Bt,                                            &
-                     temp, sal, Patm,                                       &
-                     depth, lat, 6,                                         &
-                     optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2, optKf='dg',  &
-                     K0_deriv=K0_deriv, Kb_deriv=Kb_deriv, Kspa_deriv=Kspa_deriv )
-   
-!  Print out derivatives of thermodynamic constants
-   write(*,50)
-   write(*,300)
-   do i=1,N
-     write(*,301) K0(i), K0_deriv(1,i), K0_deriv(2,i), Kb(i), Kb_deriv(1,i), Kb_deriv(2,i),    &
-        Kspa(i), Kspa_deriv(1,i), Kspa_deriv(2,i)
-   end do
-   write(*,52)
-   
+!  Need to change to call latest version of constants & derivnum (to get constand 
+!  call constants (K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,                   &
+!                     K1p, K2p, K3p, Ksi,                                    &
+!                     St, Ft, Bt,                                            &
+!                     temp, sal, Patm,                                       &
+!                     depth, lat, 6,                                         &
+!                     optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2, optKf='dg',  &
+!                     K0_deriv=K0_deriv, Kb_deriv=Kb_deriv, Kspa_deriv=Kspa_deriv )
+!   
+!!  Print out derivatives of thermodynamic constants
+!   write(*,50)
+!   write(*,300)
+!   do i=1,N
+!     write(*,301) K0(i), K0_deriv(1,i), K0_deriv(2,i), Kb(i), Kb_deriv(1,i), Kb_deriv(2,i),    &
+!        Kspa(i), Kspa_deriv(1,i), Kspa_deriv(2,i)
+!   end do
+!   write(*,52)
    
   50 format(/)
   51 format(179('-'))
-  52 format(106('-'))
+! 52 format(106('-'))
 
 
  200 format('Typical DATA output',                                                                              / &
@@ -150,12 +142,12 @@ PROGRAM test_mocsy
 
  201 format(f7.4, 2f7.1, 3(e12.4), 3f7.2, f8.2, f7.1, f8.3, 6f13.9)
 
- 300 format('Constants and their derivatives',                                                   / &
-            106('-'),                                                                                                    / &
-            '  K0        dK0/dT       dK0/dS       Kb        dKb/dT      dKb/dS       Kspa       dKspa/dT    dKspa/dT', / &
-            106('-')                                                                                                     )
-
- 301 format(f10.7, 8(e12.4, e12.4) )
+! 300 format('Constants and their derivatives',                                                   / &
+!            106('-'),                                                                                                    / &
+!            '  K0        dK0/dT       dK0/dS       Kb        dKb/dT      dKb/dS       Kspa       dKspa/dT    dKspa/dT', / &
+!            106('-')                                                                                                     )
+!
+! 301 format(f10.7, 8(e12.4, e12.4) )
 
   STOP
 END PROGRAM test_mocsy

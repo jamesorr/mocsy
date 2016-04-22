@@ -4,24 +4,19 @@
 !! from S,T,P 
 MODULE mconstants
 CONTAINS
-!> Compute thermodynamic constants 
+!> Compute thermodynamic constants
 !! FROM temperature, salinity, and pressure (1D arrays)
-!! and their derivatives with respect to temperature and salinity.
-SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,                &
-                     K1p, K2p, K3p, Ksi,                                    &
-                     St, Ft, Bt,                                            &
-                     temp, sal, Patm,                                       &
-                     depth, lat, N,                                         &
-                     optT, optP, optB, optK1K2, optKf, optGAS,              &
-                     K0_deriv, K1_deriv, K2_deriv, Kb_deriv,                &
-                     Kw_deriv, Ks_deriv, Kf_deriv, Kspc_deriv, Kspa_deriv,  &
-                     K1p_deriv, K2p_deriv, K3p_deriv, Ksi_deriv             )
+SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
+                     K1p, K2p, K3p, Ksi,                      &
+                     St, Ft, Bt,                              &
+                     temp, sal, Patm,                         &
+                     depth, lat, N,                           &
+                     optT, optP, optB, optK1K2, optKf, optGAS)
 
   !   Purpose:
   !     Compute thermodynamic constants
   !     FROM: temperature, salinity, and pressure (1D arrays)
-  !     and their derivatives with respect to temperature and salinity.
-  
+
   !     INPUT variables:
   !     ================
   !     Patm    = atmospheric pressure [atm]
@@ -77,303 +72,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,                &
   !     =================
   !     K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi
   !     St, Ft, Bt
-
-  !     Optional OUTPUT variables:
-  !     =========================
-  !     K0_deriv, K1_deriv, K2_deriv, Kb_deriv, Kw_deriv, Ks_deriv, Kf_deriv, 
-  !     Kspc_deriv, Kspa_deriv, K1p_deriv, K2p_deriv, K3p_deriv, Ksi_deriv
-  !        = Partial derivatives of K0, K1, ... with respect to temperature and salinity
 
 #if USE_PRECISION == 2
 #   define SGLE(x)    (x)
 #else
 #   define SGLE(x)    REAL(x)
 #endif
-
-USE msingledouble
-  USE mp80
-  USE msw_temp
-  USE msw_ptmp
-  USE Dual_Num_Auto_Diff
-  IMPLICIT NONE
-
-! Input variables
-  !>     number of records
-  INTEGER, INTENT(in) :: N
-  !> in <b>situ temperature</b> (when optT='Tinsitu', typical data) 
-  !! OR <b>potential temperature</b> (when optT='Tpot', typical models) [degree C]
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: temp
-  !> depth in <b>meters</b> (when optP='m') or <b>decibars</b> (when optP='db')
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: depth
-  !> latitude <b>[degrees north]</b>
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: lat
-  !> salinity <b>[psu]</b>
-  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
-!f2py optional , depend(sal) :: n=len(sal)
-
-  !> atmospheric pressure <b>[atm]</b>
-  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
-
-  !> for temp input, choose \b 'Tinsitu' for in situ Temp or 
-  !! \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
-  CHARACTER(7), INTENT(in) :: optT
-  !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
-  CHARACTER(2), INTENT(in) :: optP
-  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
-  !! The 'l10' formulation is based on 139 measurements (instead of 20),
-  !! uses a more accurate method, and
-  !! generally increases total boron in seawater by 4% 
-!f2py character*3 optional, intent(in) :: optB='l10'
-  CHARACTER(3), OPTIONAL, INTENT(in) :: optB
-  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
-!f2py character*2 optional, intent(in) :: optKf='pf'
-  CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
-  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
-!f2py character*3 optional, intent(in) :: optK1K2='l'
-  CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
-  !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
-  !! 'Ppot'    - for 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
-  !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
-  !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
-!f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
-  CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
-
-! Ouput variables
-  !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K0
-  !> K1 for the dissociation of carbonic acid from Lueker et al. (2000) or Millero (2010), depending on optK1K2
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K1
-  !> K2 for the dissociation of carbonic acid from Lueker et al. (2000) or Millero (2010), depending on optK1K2
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K2
-  !> equilibrium constant for dissociation of boric acid 
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kb
-  !> equilibrium constant for the dissociation of water (Millero, 1995)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kw
-  !> equilibrium constant for the dissociation of bisulfate (Dickson, 1990)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Ks
-  !> equilibrium constant for the dissociation of hydrogen fluoride 
-  !! either from Dickson and Riley (1979) or from Perez and Fraga (1987), depending on optKf
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kf
-  !> solubility product for calcite (Mucci, 1983)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kspc
-  !> solubility product for aragonite (Mucci, 1983)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Kspa
-  !> 1st dissociation constant for phosphoric acid (Millero, 1995)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K1p
-  !> 2nd dissociation constant for phosphoric acid (Millero, 1995)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K2p
-  !> 3rd dissociation constant for phosphoric acid (Millero, 1995)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: K3p
-  !> equilibrium constant for the dissociation of silicic acid (Millero, 1995)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Ksi
-  !> total sulfate (Morris & Riley, 1966)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: St
-  !> total fluoride  (Riley, 1965)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Ft
-  !> total boron
-  !! from either Uppstrom (1974) or Lee et al. (2010), depending on optB
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Bt
-
-! Optional output variables: derivatives with respect to temperature and salinity (in this order)
-  !> derivatives of K0, K1, K2
-  REAL(kind=r8), OPTIONAL, INTENT(out), DIMENSION(2,N) :: K0_deriv, K1_deriv, K2_deriv
-  !> derivatives of Kb, Kw, Kf, Ks
-  REAL(kind=r8), OPTIONAL, INTENT(out), DIMENSION(2,N) :: Kb_deriv, Kw_deriv, Ks_deriv, Kf_deriv
-  !> derivatives of Kspc, Kspa
-  REAL(kind=r8), OPTIONAL, INTENT(out), DIMENSION(2,N) :: Kspc_deriv, Kspa_deriv
-  !> derivatives of K1p, K2p, K3p, Ksi
-  REAL(kind=r8), OPTIONAL, INTENT(out), DIMENSION(2,N) :: K1p_deriv, K2p_deriv, K3p_deriv, Ksi_deriv
-  
-! Local variables
-
-! Dual_num objects used only if derivatives to be computed
-  TYPE(DUAL_NUM), DIMENSION(N) :: K0_DNAD, K1_DNAD, K2_DNAD
-  TYPE(DUAL_NUM), DIMENSION(N) :: Kb_DNAD, Kw_DNAD, Ks_DNAD, Kf_DNAD
-  TYPE(DUAL_NUM), DIMENSION(N) :: Kspc_DNAD, Kspa_DNAD
-  TYPE(DUAL_NUM), DIMENSION(N) :: K1p_DNAD, K2p_DNAD, K3p_DNAD, Ksi_DNAD
-  TYPE(DUAL_NUM), DIMENSION(N) :: St_DNAD, Ft_DNAD, Bt_DNAD
-  TYPE(DUAL_NUM), DIMENSION(N) :: temp_DNAD, sal_DNAD, Patm_DNAD
-
-  INTEGER i
-  
-  
-! Check if we have to compute derivatives
-  IF (PRESENT(K0_deriv)   .OR.       &
-      PRESENT(K1_deriv)   .OR.       &
-      PRESENT(K2_deriv)   .OR.       &
-      PRESENT(Kb_deriv)   .OR.       &
-      PRESENT(Kw_deriv)   .OR.       &
-      PRESENT(Ks_deriv)   .OR.       &
-      PRESENT(Kf_deriv)   .OR.       &
-      PRESENT(Kspc_deriv) .OR.       &
-      PRESENT(Kspa_deriv) .OR.       &
-      PRESENT(K1p_deriv)  .OR.       &
-      PRESENT(K2p_deriv)  .OR.       &
-      PRESENT(K3p_deriv)  .OR.       &
-      PRESENT(Ksi_deriv) )  THEN
-
-      ! Initialise input variables and their derivatives
-      DO i = 1, N
-         temp_DNAD(i) = DUAL_NUM (temp(i), (/0.0D0,0.0D0,0.0D0,0.0D0,1.0D0,0.0D0/))
-         sal_DNAD(i)  = DUAL_NUM (sal(i),  (/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,1.0D0/))
-         Patm_DNAD(i) = DUAL_NUM (Patm(i), (/0.0D0,0.0D0,0.0D0,0.0D0,0.0D0,0.0D0/))
-      ENDDO
-      ! Comute constants and their derivatives
-      CALL constants_DNAD (K0_DNAD, K1_DNAD, K2_DNAD, Kb_DNAD, Kw_DNAD, Ks_DNAD,  &
-                     Kf_DNAD, Kspc_DNAD, Kspa_DNAD,                               &
-                     K1p_DNAD, K2p_DNAD, K3p_DNAD, Ksi_DNAD,                      &
-                     St_DNAD, Ft_DNAD, Bt_DNAD,                                   &
-                     temp_DNAD, sal_DNAD, Patm_DNAD,                              &
-                     depth, lat, N,                                               &
-                     optT, optP, optB, optK1K2, optKf, optGAS                     )
-
-      ! Redistribute output variables and their derivatives
-      DO i = 1, N
-         ! Copy values
-         K0(i)   = K0_DNAD(i)%x_ad_
-         K1(i)   = K1_DNAD(i)%x_ad_
-         K2(i)   = K2_DNAD(i)%x_ad_
-         Kb(i)   = Kb_DNAD(i)%x_ad_
-         Kw(i)   = Kw_DNAD(i)%x_ad_
-         Ks(i)   = Ks_DNAD(i)%x_ad_
-         Kf(i)   = Kf_DNAD(i)%x_ad_
-         Kspc(i) = Kspc_DNAD(i)%x_ad_
-         Kspa(i) = Kspa_DNAD(i)%x_ad_
-         K1p(i)  = K1p_DNAD(i)%x_ad_
-         K2p(i)  = K2p_DNAD(i)%x_ad_
-         K3p(i)  = K3p_DNAD(i)%x_ad_
-         Ksi(i)  = Ksi_DNAD(i)%x_ad_
-  
-         St(i) = St_DNAD(i)%x_ad_
-         Ft(i) = Ft_DNAD(i)%x_ad_
-         Bt(i) = Bt_DNAD(i)%x_ad_
-
-         ! Copy derivatives : two last values of array 'xp_ad_' of derivatives
-         IF (PRESENT(K0_deriv)) THEN
-            K0_deriv(:,i)   = K0_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(K1_deriv)) THEN
-            K1_deriv(:,i)   = K1_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(K2_deriv)) THEN
-            K2_deriv(:,i)   = K2_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Kb_deriv)) THEN
-            Kb_deriv(:,i)   = Kb_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Kw_deriv)) THEN
-            Kw_deriv(:,i)   = Kw_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Ks_deriv)) THEN
-            Ks_deriv(:,i)   = Ks_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Kf_deriv)) THEN
-            Kf_deriv(:,i)   = Kf_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Kspc_deriv)) THEN
-            Kspc_deriv(:,i) = Kspc_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Kspa_deriv)) THEN
-            Kspa_deriv(:,i) = Kspa_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(K1p_deriv)) THEN
-            K1p_deriv(:,i)  = K1p_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(K2p_deriv)) THEN
-            K2p_deriv(:,i)  = K2p_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(K3p_deriv)) THEN
-            K3p_deriv(:,i)  = K3p_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-         IF (PRESENT(Ksi_deriv)) THEN
-            Ksi_deriv(:,i)  = Ksi_DNAD(i)%xp_ad_(5:6)
-         ENDIF
-      ENDDO
-
-  ELSE
-      ! Compute thermodynamic constants alone (w/o derivatives)
-      CALL constants_alone(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
-                     K1p, K2p, K3p, Ksi,                      &
-                     St, Ft, Bt,                              &
-                     temp, sal, Patm,                         &
-                     depth, lat, N,                           &
-                     optT, optP, optB, optK1K2, optKf, optGAS)
-
-  ENDIF
-                  
-
-                  
-  RETURN
-END SUBROUTINE constants
-
-!> Compute thermodynamic constants
-!! FROM temperature, salinity, and pressure (1D arrays)
-SUBROUTINE constants_alone(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
-                     K1p, K2p, K3p, Ksi,                      &
-                     St, Ft, Bt,                              &
-                     temp, sal, Patm,                         &
-                     depth, lat, N,                           &
-                     optT, optP, optB, optK1K2, optKf, optGAS)
-
-  !   Purpose:
-  !     Compute thermodynamic constants
-  !     FROM: temperature, salinity, and pressure (1D arrays)
-
-  !     INPUT variables:
-  !     ================
-  !     Patm    = atmospheric pressure [atm]
-  !     depth   = depth [m]     (with optP='m', i.e., for a z-coordinate model vertical grid is depth, not pressure)
-  !             = pressure [db] (with optP='db')
-  !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
-  !             = dummy array (unused when optP='db')
-  !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not temp)
-  !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
-  !     sal     = salinity in [psu]
-  !     ---------
-  !     optT: choose in situ vs. potential temperature as input
-  !     ---------
-  !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
-  !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
-  !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
-  !     ---------
-  !     optP: choose depth (m) vs pressure (db) as input
-  !     ---------
-  !       -> 'm'  means "depth" input is in "m" (thus in situ Pressure "p" [db] is computed)
-  !       -> 'db' means "depth" input is already in situ pressure [db], not m (p = depth)
-  !     ---------
-  !     optB:
-  !     ---------
-  !       -> 'u74' means use classic formulation of Uppström (1974) for total Boron
-  !       -> 'l10' means use newer   formulation of Lee et al. (2010) for total Boron
-  !     ---------
-  !     optK1K2:
-  !     ---------
-  !       -> 'l'   means use Lueker et al. (2000) formulations for K1 & K2 (recommended by Dickson et al. 2007)
-  !                **** BUT this should only be used when 2 < T < 35 and 19 < S < 43
-  !       -> 'm10' means use Millero (2010) formulation for K1 & K2 (see Dickson et al., 2007)
-  !                **** Valid for 0 < T < 50°C and 1 < S < 50 psu
-  !     -----------
-  !     optKf:
-  !     ----------
-  !       -> 'pf' means use Perez & Fraga (1987) formulation for Kf (recommended by Dickson et al., 2007)
-  !               **** BUT Valid for  9 < T < 33°C and 10 < S < 40.
-  !       -> 'dg' means use Dickson & Riley (1979) formulation for Kf (recommended by Dickson & Goyet, 1994)
-  !     -----------
-  !     optGAS: choose in situ vs. potential fCO2 and pCO2
-  !     ---------
-  !       PRESSURE corrections for K0 and the fugacity coefficient (Cf) 
-  !       -> 'Pzero'   = 'zero order' fCO2 and pCO2 (typical approach, which is flawed)
-  !                      considers in situ T & only atm pressure (hydrostatic=0)
-  !       -> 'Ppot'    = 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
-  !                      considers potential T & only atm pressure (hydrostatic press = 0)
-  !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
-  !                      considers in situ T & total pressure (atm + hydrostatic)
-  !     ---------
-
-  !     OUTPUT variables:
-  !     =================
-  !     K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa, K1p, K2p, K3p, Ksi
-  !     St, Ft, Bt
 
   USE msingledouble
   USE mp80
@@ -383,6 +87,7 @@ SUBROUTINE constants_alone(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
 ! Input variables
   !>     number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
   !> in <b>situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) [degree C]
@@ -393,7 +98,6 @@ SUBROUTINE constants_alone(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: lat
   !> salinity <b>[psu]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
-!f2py optional , depend(sal) :: n=len(sal)
 
   !> atmospheric pressure <b>[atm]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
@@ -925,7 +629,7 @@ SUBROUTINE constants_alone(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   END DO
 
   RETURN
-END SUBROUTINE constants_alone
+END SUBROUTINE constants
 
 !> Compute thermodynamic constants
 !! and their derivatives with respect to temperature and salinity
