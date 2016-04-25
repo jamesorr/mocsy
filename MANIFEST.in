@@ -1,0 +1,6 @@
+include README.rst
+include ChangeLog
+include LICENSE
+include *.txt
+include mocsy/_mocsy.*
+recursive-include mocsy *.py
