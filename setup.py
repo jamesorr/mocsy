@@ -1,9 +1,23 @@
 from __future__ import division, absolute_import, print_function
 
 import os
+import sys
 from setuptools import setup
-from numpy.distutils.core import Extension, setup
+from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
+from setuptools.command.test import test as TestCommand
+
+
+class PyTest(TestCommand):
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.verbose = True
+
+    def run_tests(self):
+        import pytest
+        errno = pytest.main(self.test_args)
+        sys.exit(errno)
+
 
 def extract_version(module='mocsy'):
     version = None
@@ -80,7 +94,7 @@ setup(name='mocsy',
       install_requires=install_requires,
       packages=['mocsy'],
       ext_package='mocsy',
-      maintainer='Filipe Fernandes',
-      maintainer_email='ocefpaf@gmail.com',
+      tests_require=['pytest'],
+      cmdclass=dict(test=PyTest),
       **config.todict()
       )
