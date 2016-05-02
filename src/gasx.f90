@@ -364,14 +364,14 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
 
 ! INPUT variables
   !> wind speed at 10-m height
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
+  REAL(kind=r8), INTENT(out) :: Fice
   !> modeled sea-ice cover: fraction of grid cell, varying between 0.0 (no ice) and 1.0 (full cover)
   REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
 !f2py optional , depend(windspeed) :: n=len(windspeed)
 
 ! OUTPUT variables:
   !> piston velocity at 25°C [m/s], uncorrected by the Schmidt number for different temperatures
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: kw660
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: kw660
 
 ! LOCAL variables:
   REAL(kind=r8) :: a, xfac
@@ -385,7 +385,7 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
   xfac = 0.01d0 / 3600d0
   
   DO i = 1,N
-     kw660(i) = a * windspeed(i)**2) * (1.0d0 - Fice) * xfac
+     kw660(i) = a * windspeed(i)**2 * (1.0d0 - Fice) * xfac
   END DO
 
   RETURN
@@ -596,9 +596,9 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
 
 ! INPUT variables
   !> surface temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: T
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: T
   !> surface salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: S
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: S
 !f2py optional , depend(temp) :: n=len(temp)
 
 ! OUTPUT variables:
@@ -617,7 +617,8 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
        A3/ 4.94457   /, A4/-2.56847E-1/, A5/ 3.88767 /
   DATA B0/-6.24523E-3/, B1/-7.37614E-3/, B2/-1.03410E-2/, B3/-8.17083E-3/
   DATA C0/-4.88682E-7/
-      
+
+  INTEGER :: i
   DO i = 1, N
       tt  = 298.15 - T(i)
       tk  = 273.15 + T(i)
@@ -675,6 +676,7 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
 
   !> number of records
   INTEGER, intent(in) :: N
+  INTEGER :: I
 
 ! INPUT variables
   !> sea surface temperature [C]
@@ -690,6 +692,7 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
   !> thickness of surface grid box [m]
   REAL(kind=r8), INTENT(in), DIMENSION(N) :: dz1
 !f2py optional , depend(temp) :: n=len(temp)
+  REAL(kind=r8), DIMENSION(N) :: o2sat
 
 ! OUTPUT variables:
   !> rate of change of dissolved O2 in the surface layer due to air-sea O2 exchange [mol/(m^3*s)]
@@ -704,7 +707,7 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
 
   DO i = 1, N
 !     Transfer velocity for O2 in m/s [4]
-      kwo2 = (kw660(i) * (660/sco2(T))**0.5)
+      kwo2 = (kw660(i) * (660/sco2(T(i)))**0.5)
       
 !     O2 saturation concentration at given atm pressure [3]
       o2sat = o2sat_1atm(i) * ppo(i)
