@@ -366,7 +366,7 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
   !> wind speed at 10-m height
   REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
   !> modeled sea-ice cover: fraction of grid cell, varying between 0.0 (no ice) and 1.0 (full cover)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Fice
 !f2py optional , depend(windspeed) :: n=len(windspeed)
 
 ! OUTPUT variables:
@@ -385,7 +385,7 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
   xfac = 0.01d0 / 3600d0
   
   DO i = 1,N
-     kw660(i) = a * windspeed(i)**2) * (1.0d0 - Fice) * xfac
+     kw660(i) = a * windspeed(i)**2 * (1.0d0 - Fice(i)) * xfac
   END DO
 
   RETURN
@@ -618,6 +618,8 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
   DATA B0/-6.24523E-3/, B1/-7.37614E-3/, B2/-1.03410E-2/, B3/-8.17083E-3/
   DATA C0/-4.88682E-7/
       
+  INTEGER :: i
+
   DO i = 1, N
       tt  = 298.15 - T(i)
       tk  = 273.15 + T(i)
@@ -699,18 +701,21 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
   REAL(kind=r8) :: kwo2
   REAL(kind=r8), DIMENSION(N) :: o2sat_1atm
 
+  INTEGER :: i
+  REAL(kind=r8) :: o2sat
+
 ! Dissolved O2 saturation concentraion [mol/m^3] (in equilibrium with atmosphere) at 1 atm pressure 
-  CALL o2sato(T, S, N, o2sat_1atm)
+  CALL o2sato(SNGL(T), SNGL(S), N, o2sat_1atm)
 
   DO i = 1, N
 !     Transfer velocity for O2 in m/s [4]
-      kwo2 = (kw660(i) * (660/sco2(T))**0.5)
+      kwo2 = (kw660(i) * (660/sco2(T(i)))**0.5)
       
 !     O2 saturation concentration at given atm pressure [3]
       o2sat = o2sat_1atm(i) * ppo(i)
 
 !     Time rate of change of surface dissolved O2 due to gas exchange (mol/(m3 * s) [1]
-      o2ex(i) = kwo2*(o2sat(i) - o2(i)) / dz1(i)
+      o2ex(i) = kwo2*(o2sat - o2(i)) / dz1(i)
   END DO
 
   RETURN
