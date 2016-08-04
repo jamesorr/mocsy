@@ -25,51 +25,75 @@ PROGRAM test_errors
    optCON  = 'mol/kg'  ! input concentrations are in MOL/KG
    optT    = 'Tinsitu' ! input temperature, variable 'temp' is actually IN SITU temp [°C]
    optP    = 'm'       ! input variable 'depth' is in meters
-   optB    = 'l10'
+   optB    = 'u74'
    optK1K2 = 'l'
    optKf   = 'dg'
 
     ! Input errors
-    ALK_e(:) = 2d-6    ! (2 umol/kg for ALK)
-    DIC_e(:) = 2d-6    ! (2 umol/kg for DIC)
-    sal_e(:) = 0.0     ! (psu)
-    temp_e(:) = 0.0    ! (C)
+    ALK_e(:) = 2.d-6    ! (2 umol/kg for ALK)
+    DIC_e(:) = 2.d-6    ! (2 umol/kg for DIC)
+    sal_e(:)  = 0.0d0     ! (psu)
+    temp_e(:) = 0.0d0    ! (C)
     phos_e(:) = 0.1d-6
     sil_e(:) = 4.0d-6    
-    epk(:) = 0.0
-
+    epK(:) = 0.0
 
    ! ------------------
    ! 1s test : 1 record 
    ! ------------------
     
-    temp(1)   = 18.0            !Can be "Potential temperature" or "In situ temperature" (see optT below)
-    sal(1)    = 35.0           !Salinity (practical scale)
-    alk(1)    = 2300.*1.d-6      ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
-    dic(1)    = 2000.*1.d-6      ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
-    sil(1)    = 60.*1.d-6   ! 60
-    phos(1)   = 2.*1.d-6   !  2
-    depth(1)  = 0.
-    Patm(1)   = 1.0            !Atmospheric pressure (atm)
-    lat(1)    = 0.
+    temp(1)   = 18.0d0           ! Can be "Potential temperature" or "In situ temperature" (see optT below)
+    sal(1)    = 35.0d0           ! Salinity (practical scale)
+    alk(1)    = 2300.d-6         ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
+    dic(1)    = 2000.d-6         ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
+!
+    sil(1)    = 60.d-6           ! 60
+    phos(1)   = 2.d-6            !  2
+!
+!   sil(1)    = 0.d0
+!   phos(1)   = 0.d0
+!
+    depth(1)  = 0.d0
+    Patm(1)   = 1.0d0            ! Atmospheric pressure (atm)
+    lat(1)    = 0.d0
 
-   ! compute output errors
+!  Compute output errors
+   write (*,*) "Test 1: Default error on constants"
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
              temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
              optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf   )
-
-   write (*,*) "1st test :"
    write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
         "eOmegaA     eOmegaC   "
-
    DO i = 1,1
      write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
    END DO
 
-   
+   write (*,*) "Test 2: NO error on constants"
+   call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,            &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,                &  ! INPUT
+             temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                         &
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epK  )
+   write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
+        "eOmegaA     eOmegaC   "
+   DO i = 1,1
+     write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+   END DO
+
+   write (*,*) "Test 3: Default error on constants"
+   epK = (/0.002, 0.01, 0.02, 0.01, 0.01, 0.01, 0.01/)
+   call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
+             temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epK )
+   write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
+        "eOmegaA     eOmegaC   "
+   DO i = 1,1
+     write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+   END DO
+
    ! ----------------------------------------
-   ! 2nd test : 6 records at increasing depth
+   ! Test 4: six records at increasing depth
    ! ----------------------------------------
     
    ! Simple input data (with CONCENTRATION units typical for DATA)
@@ -92,7 +116,7 @@ PROGRAM test_errors
              temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
              optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf   )
 
-   write (*,*) "2nd test:"
+   write (*,*) "Test 4: six records at increasing depth"
    write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
         "eOmegaA     eOmegaC   "
 
