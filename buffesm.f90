@@ -1,7 +1,7 @@
 !> \file buffesm2.f90
 !! \BRIEF 
 !> Module with buffesm subroutine - compute carbonate system vars from DIC,Alk,T,S,P,nuts
-MODULE mbuffesm2
+MODULE mbuffesm
 CONTAINS
 !>    Computes buffer factors of the seawater carbonate system as defined by Egleston et al. (2010)
 !!    (corrected for sign error & modified to account for effects of total dissolved inorganic P and Si acid systems) 
@@ -9,7 +9,7 @@ CONTAINS
 !!    temperature, salinity, pressure,
 !!    total alkalinity (ALK), dissolved inorganic carbon (DIC),
 !!    silica and phosphate concentrations (all 1-D arrays)
-SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf, &
+SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf, &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,             &
                 optCON, optT, optP, optB, optK1K2, optKf, optGAS                   )
 
@@ -198,18 +198,18 @@ SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf
   REAL(kind=r8), DIMENSION(N) :: Bt
 
   ! 2) Output from vars.f90:
-  REAL(kind=r8), DIMENSION(N) :: ph
-  REAL(kind=r8), DIMENSION(N) :: pco2
-  REAL(kind=r8), DIMENSION(N) :: fco2
-  REAL(kind=r8), DIMENSION(N) :: co2
-  REAL(kind=r8), DIMENSION(N) :: hco3
-  REAL(kind=r8), DIMENSION(N) :: co3
-  REAL(kind=r8), DIMENSION(N) :: OmegaA
-  REAL(kind=r8), DIMENSION(N) :: OmegaC
-  REAL(kind=r8), DIMENSION(N) :: BetaD
-  REAL(kind=r8), DIMENSION(N) :: rhoSW
-  REAL(kind=r8), DIMENSION(N) :: p
-  REAL(kind=r8), DIMENSION(N) :: tempis
+  REAL(kind=rx), DIMENSION(N) :: ph
+  REAL(kind=rx), DIMENSION(N) :: pco2
+  REAL(kind=rx), DIMENSION(N) :: fco2
+  REAL(kind=rx), DIMENSION(N) :: co2
+  REAL(kind=rx), DIMENSION(N) :: hco3
+  REAL(kind=rx), DIMENSION(N) :: co3
+  REAL(kind=rx), DIMENSION(N) :: OmegaA
+  REAL(kind=rx), DIMENSION(N) :: OmegaC
+  REAL(kind=rx), DIMENSION(N) :: BetaD
+  REAL(kind=rx), DIMENSION(N) :: rhoSW
+  REAL(kind=rx), DIMENSION(N) :: p
+  REAL(kind=rx), DIMENSION(N) :: tempis
 
   ! 3) Other Local variables (needed to compute buffer factors)
   REAL(kind=r8) :: Alkc, Borate, h, oh
@@ -346,5 +346,5 @@ SUBROUTINE buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf
    END DO
 
   RETURN
-END SUBROUTINE buffesm2
-END MODULE mbuffesm2
+END SUBROUTINE buffesm
+END MODULE mbuffesm
