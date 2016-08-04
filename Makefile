@@ -14,6 +14,7 @@
 # set to  2 if you wish results in DOUBLE precision
 # set to 1 or 0 if SINGLE
 PRECISION = 2
+#PRECISION = 1
 
 # mapping between Fortran and C types
 ifeq (${PRECISION}, 2)
@@ -68,7 +69,7 @@ SOURCES = singledouble.f90 \
           derivauto.f90 \
           derivnum.f90 \
           errors.f90 \
-          buffesm2.f90 \
+          buffesm.f90 \
           p2fCO2.f90 \
           f2pCO2.f90 \
           gasx.f90 
@@ -90,7 +91,7 @@ OBJS =  singledouble.o \
 	derivauto.o \
 	derivnum.o \
 	errors.o \
-        buffesm2.o \
+        buffesm.o \
         p2fCO2.o \
         f2pCO2.o \
         gasx.o
@@ -148,7 +149,7 @@ test_derivauto:  $(LIBSRC_OBJECTS) test_derivauto.o $(library)
 test_derivnum:  $(LIBSRC_OBJECTS) test_derivnum.o $(library) 
 	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
-test_buffesm2:  $(LIBSRC_OBJECTS) test_buffesm2.o $(library) 
+test_buffesm:  $(LIBSRC_OBJECTS) test_buffesm.o $(library) 
 	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
 
 #---------------------------------------------------------------------------
