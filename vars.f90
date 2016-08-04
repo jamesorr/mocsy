@@ -164,7 +164,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
-  CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+! CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optGAS
 
 ! Output variables:
   !> pH on the <b>total scale</b>
