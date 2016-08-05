@@ -366,7 +366,7 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
   !> wind speed at 10-m height
   REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
   !> modeled sea-ice cover: fraction of grid cell, varying between 0.0 (no ice) and 1.0 (full cover)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
+  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Fice
 !f2py optional , depend(windspeed) :: n=len(windspeed)
 
 ! OUTPUT variables:
@@ -385,7 +385,7 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
   xfac = 0.01d0 / 3600d0
   
   DO i = 1,N
-     kw660(i) = a * windspeed(i)**2) * (1.0d0 - Fice) * xfac
+     kw660(i) = a * windspeed(i)**2 * (1.0d0 - Fice(i)) * xfac
   END DO
 
   RETURN
@@ -404,13 +404,13 @@ FUNCTION sccfc11(temp)
    REAL(kind=r8), INTENT(in) :: temp
    REAL(kind=r8) :: sccfc11
 
-   sccfc11 = 3579.2 - 222.63*temp + 7.5749*temp**2 - 0.14595*temp**3  + 0.0011874*temp**4
+   sccfc11 = 3579.2_r8 - 222.63_r8*temp + 7.5749_r8*temp**2 - 0.14595_r8*temp**3  + 0.0011874_r8*temp**4
    
    RETURN
 END FUNCTION sccfc11
 
 !>    Compute Schmidt number for CFC12 in seawater from temperature
-FUNCTION sccfc12(temp)
+FUNCTION sccfc12(Tc)
 
 !  Compute Schmidt number of CFC12 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
 !  Input is temperature in deg C.
@@ -419,16 +419,16 @@ FUNCTION sccfc12(temp)
    IMPLICIT NONE
 
 !  Input & output variables:
-   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8), INTENT(in) :: Tc
    REAL(kind=r8) :: sccfc12
 
-   sccfc12 = 3828.1 - 249.86*temp + 8.7603*temp**2 - 0.1716*temp**3   + 0.001408*temp**4
+   sccfc12 = 3828.1_r8 - 249.86_r8*Tc + 8.7603_r8*Tc**2 - 0.1716_r8*Tc**3   + 0.001408_r8*Tc**4
       
    RETURN
 END FUNCTION sccfc12
 
 !>    Compute Schmidt number for SF6 in seawater from temperature
-FUNCTION scsf6(temp)
+FUNCTION scsf6(Tc)
 
 !  Compute Schmidt number of SF6 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
 !  Input is temperature in deg C.
@@ -437,16 +437,16 @@ FUNCTION scsf6(temp)
    IMPLICIT NONE
 
 !  Input & output variables:
-   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8), INTENT(in) :: Tc
    REAL(kind=r8) :: scsf6
 
-   scsf6 = 3177.5 - 200.57*temp + 6.8865*temp**2 - 0.13335*temp**3 + 0.0010877*temp**4
+   scsf6 = 3177.5_r8 - 200.57_r8*Tc + 6.8865_r8*Tc**2 - 0.13335_r8*Tc**3 + 0.0010877_r8*Tc**4
       
    RETURN
 END FUNCTION scsf6
 
 !>    Compute Schmidt number for CO2 in seawater from temperature
-FUNCTION scco2(temp)
+FUNCTION scco2(Tc)
 
 !  Compute Schmidt number of CO2 in seawater w/ formulation from Wanninkhof (Limnol. Oceanogr.: Methods 12, 2014, 351–362)
 !  Input is temperature in deg C.
@@ -455,10 +455,10 @@ FUNCTION scco2(temp)
    IMPLICIT NONE
 
 !  Input & output variables:
-   REAL(kind=r8), INTENT(in) :: temp
+   REAL(kind=r8), INTENT(in) :: Tc
    REAL(kind=r8) :: scco2
 
-   scco2 = 2116.8 - 136.25*temp + 4.7353*temp**2 - 0.092307*temp**3 + 0.0007555*temp**4
+   scco2 = 2116.8_r8 - 136.25_r8*Tc + 4.7353_r8*Tc**2 - 0.092307_r8*Tc**3 + 0.0007555_r8*Tc**4
 
    RETURN
 END FUNCTION scco2
@@ -476,7 +476,7 @@ FUNCTION sco2(Tc)
    REAL(kind=r8), INTENT(in) :: Tc
    REAL(kind=r8) :: sco2
 
-   sco2 = 1920.4 - 135.6*Tc  + 5.2122*Tc**2 - 0.10939*Tc**3  + 0.00093777*Tc**4
+   sco2 = 1920.4_r8 - 135.6_r8*Tc  + 5.2122_r8*Tc**2 - 0.10939_r8*Tc**3  + 0.00093777_r8*Tc**4
 
    RETURN
 END FUNCTION sco2
@@ -527,6 +527,132 @@ SUBROUTINE x2pCO2atm(xCO2, temp, salt, Patm, N, pCO2atm)
 
   RETURN
 END SUBROUTINE x2pCO2atm
+
+!>    Compute solubilities of CFC-11, CFC-12, SF6, CO2, and N20 at 1 atm pressure, i.e., Phi0 (atm), in mol L-1 atm-1 
+SUBROUTINE solgas(gasname, temp, salt, N, phi0)
+  !    Purpose:
+  !    Compute solubilities of CFC-11, CFC-12, SF6, CO2, and N20 at 1 atm pressure, i.e., Phi0 (atm), in mol L-1 atm-1 
+  !    Phi0 = K0 * Cf * (Pa0 - pH20),
+  !    where
+  !    * K0 is the solubility of a given gas,
+  !    * Cf is its fugacity coefficient,
+  !    * Pa0 is 1 atm of total atmospheric pressure, and
+  !    * pH20 is the water vapor pressure at saturation (also in atm), all described in Orr et al. (2016, GMDD).
+
+  !    Usage: this routine must be called once for each gas, e.g.,
+  !           call solgas('co2', temp, salt, 20, phi0_co2)
+  !           call solgas('sf6', temp, salt, 20, phi0_sf6)
+  
+  ! James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, Université Paris Saclay, France
+  ! 5 August 2016
+  
+  USE msingledouble
+  IMPLICIT NONE
+
+  INTEGER, PARAMETER :: ngas = 5
+  
+  !> number of records
+  INTEGER, intent(in) :: N
+
+! INPUT variables
+  !> in situ temperature [C]
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: temp
+  !> salinity [psu]
+  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  !f2py optional , depend(temp) :: n=len(temp)
+  !> name of gas: 'cfc11', 'cfc12', 'sf6', 'co2', or 'n2o'
+  CHARACTER(*), INTENT(in) :: gasname
+
+! OUTPUT variables:
+  !> solubility of gas in seawater, Phi0 = K0 * Cf * (Pa0 - pH20), with units of [mol L-1 atm-1] 
+  REAL(kind=r8), INTENT(out), DIMENSION(N) ::  phi0
+
+! LOCAL variables:
+  ! Coefficients to compute Phi0 (depend on 'gasname' argument)  
+  REAL(kind=r8), DIMENSION(ngas) ::  a1, a2, a3, a4, b1, b2, b3
+  ! Absolute temperature and salinity
+  REAL(kind=r8) :: dsalt, tk, tk100, ln_phi0
+
+  INTEGER :: i, ig
+
+! Coefficients to compute solubilities (Phi0) of CFC-11, CFC-12, SF6, CO2, and N20
+! -------------------------------------------------------------------------------
+  ! Coefficients a1, a2, a3, a4, b1, b2, & b3 from Table 3 of Orr et al. (2016).
+  ! These are used to compute Phi0 for each gas following Eq. (15) in same paper.
+! -------------------------------------------------------------------------------
+  !            a1       a2       a3      a4       b1         b2        b3
+  ! CFC-11 -229.9261 319.6552 119.4471 -1.39165 -0.142382   0.091459 -0.0157274
+  ! CFC-12 -218.0971 298.9702 113.8049 -1.39165 -0.143566   0.091015 -0.0153924
+  ! SF6    -80.0343  117.232   29.5817  0.0      0.0335183 -0.0373942 0.00774862
+  ! CO2    -160.7333 215.4152  89.8920 -1.47759  0.029941  -0.027455  0.0053407
+  ! N2O    -165.8806 222.8743  92.0792 -1.48425 -0.056235   0.031619 -0.0048472
+  ! -------------------------------------------------------------------------------
+  ! * The originial publications providing these coefficients are
+  ! * - Warner and Weiss (1985) for CFC-11 and CFC-12,
+  ! * - Bullister et al. (2002) for SF6, and
+  ! * - Weiss and Price (1980) for CO2 and N2O.
+
+  ! Transpose of above 'matrix' coefficients, for easy use in loop below
+  !            CFC-11       CFC-12         SF6           CO2           N20
+  DATA a1 / -229.9261d0,  -218.0971d0,  -80.0343d0,  -160.7333d0,  -165.8806d0/
+  DATA a2 /  319.6552d0,   298.9702d0,  117.232d0,    215.4152d0,   222.8743d0/
+  DATA a3 /  119.4471d0,   113.8049d0,   29.5817d0,    89.8920d0,    92.0792d0/
+  DATA a4 /   -1.39165d0,   -1.39165d0,   0.0d0,       -1.47759d0,   -1.48425d0/
+  DATA b1 /   -0.142382d0,   -0.143566d0,  0.0335183d0,  0.029941d0,   -0.056235d0/
+  DATA b2 /    0.091459d0,   0.091015d0, -0.0373942d0, -0.027455d0,   0.031619d0/
+  DATA b3 /   -0.0157274d0, -0.0153924d0, 0.00774862d0, 0.0053407d0, -0.0048472d0/
+
+! Set value of the index that refers to to each gasname
+  SELECT CASE (trim(gasname))
+      CASE ('cfc11')
+          ig = 1
+      CASE ('cfc12')
+          ig = 2
+      CASE ('sf6')
+          ig = 3
+      CASE ('co2')
+          ig = 4
+      CASE ('n2o')
+          ig = 5
+      CASE DEFAULT
+          PRINT *,"ERROR in 'solgas' routine in gasx.f90:"
+          PRINT *,"'gasname' input var must be one of the following: 'cfc11', 'cfc12', 'sf6', 'co2', or 'n2o'"
+          STOP
+  END SELECT
+
+! Compute phi0  
+  DO i = 1, N
+      tk = 273.15d0 + DBLE(temp(i))     !Absolute temperature (Kelvin)
+      dsalt = DBLE(salt(i))             
+      tk100 = tk/100.d0
+      ! Phi0 for the chosen gas:
+      ln_phi0 = a1(ig) + a2(ig)/tk100 + a3(ig)*log(tk100) + a4(ig)*tk100**2   &
+           + dsalt * (b1(ig) + b2(ig)*tk100 + b3(ig)*tk100**2 )
+      phi0(i) = exp(ln_phi0)
+  END DO
+
+! REFERENCES
+!
+!  Bullister, J. L., Wisegarver, D. P., and Menzia, F. A.: The solubility of
+!  sulfur hexafluoride in water and seawater, Deep-Sea Res. I, 49, 175 –187, 2002.
+!
+!  Orr, J. C., Najjar, R. G., Aumount, O., Bopp, L., Bullister, J. L.,
+!  Danabasoglu, G., Doney, S. C., Dunne, J. P., Dutay, J.-C., Graven,
+!  H., Griffies, S. M., John, J. G., Joos, F., Levin, I., Lindsay, K.,
+!  Matear, R. J., McKinley, G. A., Mouchet, A., Oschlies, A., Romanou,
+!  A., Schlitzer, R., Tagliabue, A., Tanhua, T., and Yool, A.:
+!  Biogeochemical protocols and diagnostics for the CMIP6 Ocean Model
+!  Intercomparison Project (OMIP), Geosci. Model Dev. Discuss.,
+!  doi:10.5194/gmd-2016-155, in review, 2016.
+!
+!  Warner, M. J. and Weiss, R. F.: Solubilities of chlorofluorocarbons 11 and 12
+! in water and seawater, Deep-Sea Res. Part A., 32, 1485–1497, 1985 .
+!
+!  Weiss, R. F. and Price, B. A.: Nitrous oxide solubility in water and seawater,
+!  Mar. Chem., 8, 347–359, 1980.
+
+  RETURN
+END SUBROUTINE solgas
 
 !>    Compute vapor pressure of seawater (atm) following preocedure from Weiss & Price (1980)
 SUBROUTINE vapress(temp, salt, N, vpsw)
@@ -612,15 +738,16 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
   REAL(kind=r8) :: tmp
   REAL(kind=r8) :: o2sat_mlL 
   REAL(kind=r8) :: tt, tk, ts, ts2, ts3, ts4, ts5
-
-  DATA A0/ 2.00907   /, A1/ 3.22014   /, A2/ 4.05010 /,  &
-       A3/ 4.94457   /, A4/-2.56847E-1/, A5/ 3.88767 /
-  DATA B0/-6.24523E-3/, B1/-7.37614E-3/, B2/-1.03410E-2/, B3/-8.17083E-3/
-  DATA C0/-4.88682E-7/
+  INTEGER :: i
+  
+  DATA A0/ 2.00907_r8   /, A1/ 3.22014_r8   /, A2/ 4.05010_r8 /,  &
+       A3/ 4.94457_r8   /, A4/-2.56847E-1_r8/, A5/ 3.88767_r8 /
+  DATA B0/-6.24523E-3_r8/, B1/-7.37614E-3_r8/, B2/-1.03410E-2_r8/, B3/-8.17083E-3_r8/
+  DATA C0/-4.88682E-7_r8/
       
   DO i = 1, N
-      tt  = 298.15 - T(i)
-      tk  = 273.15 + T(i)
+      tt  = 298.15_r8 - T(i)
+      tk  = 273.15_r8 + T(i)
       ts  = LOG(tt/tk)
 
       ts2 = ts**2
@@ -635,7 +762,7 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
       o2sat_mlL = EXP(tmp)
 
 !     Convert from ml/L to mol/m^3
-      o2sat_molm3(i) = o2sat_mlL / 22391.6*1000.0
+      o2sat_molm3(i) = o2sat_mlL / 22391.6_r8*1000.0_r8
   END DO
    
   RETURN
@@ -696,21 +823,22 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
   REAL(kind=r8), INTENT(out), DIMENSION(N) :: o2ex
 
 ! LOCAL variables:
-  REAL(kind=r8) :: kwo2
+  REAL(kind=r8) :: kwo2, o2sat
   REAL(kind=r8), DIMENSION(N) :: o2sat_1atm
-
+  INTEGER :: i
+  
 ! Dissolved O2 saturation concentraion [mol/m^3] (in equilibrium with atmosphere) at 1 atm pressure 
-  CALL o2sato(T, S, N, o2sat_1atm)
+  CALL o2sato(SNGL(T), SNGL(S), N, o2sat_1atm)
 
   DO i = 1, N
 !     Transfer velocity for O2 in m/s [4]
-      kwo2 = (kw660(i) * (660/sco2(T))**0.5)
+      kwo2 = (kw660(i) * (660._r8/sco2(T(i)))**0.5)
       
 !     O2 saturation concentration at given atm pressure [3]
       o2sat = o2sat_1atm(i) * ppo(i)
 
 !     Time rate of change of surface dissolved O2 due to gas exchange (mol/(m3 * s) [1]
-      o2ex(i) = kwo2*(o2sat(i) - o2(i)) / dz1(i)
+      o2ex(i) = kwo2*(o2sat - o2(i)) / dz1(i)
   END DO
 
   RETURN

@@ -106,6 +106,11 @@ mocsy.so: $(OBJS)
 	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
 #---------------------------------------------------------------------------
 
+# Other test programs
+test_solgas:  $(OBJS) test_solgas.o $(library) 
+	${FC} ${FCFLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+
 # General rule for building prog from prog.o; $^ (GNU extension) is
 # used in order to list additional object files on which the
 # executable depends
