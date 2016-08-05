@@ -2,7 +2,7 @@ ChangeLog
 
 version 2.2, 2016-08-05
 -----------------------------------
-- Added 'gassol' subroutine to compute solubilities (Phi0) of CFC-11, CFC-12, SF6, CO2, and N20
+- Added 'solgas' subroutine to compute solubilities (Phi0) of CFC-11, CFC-12, SF6, CO2, and N20
 - Fixed previous small errors in gasex.f90 that prevented compilation
 
 version 2.1.3, 2016-01-19
