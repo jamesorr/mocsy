@@ -31,6 +31,11 @@ all: $(PROGRAMS)
 
 #---------------------------------------------------------------------------
 
+# Look for .f90 files first in the 'src' directory, then in the 'examples' directory
+
+vpath %.f90 src
+vpath %     examples
+
 SOURCES = singledouble.f90 \
           sw_adtg.f90 \
           sw_ptmp.f90 \
@@ -67,12 +72,6 @@ OBJS =  singledouble.o \
         f2pCO2.o \
         gasx.o
 
-#TOBJS = $(OBJS) \
-#        test_mocsy.o
-
-#TOBJS2 = $(OBJS) \
-#        test_mocsy2.o
-
 EXEC = test_mocsy
 
 library = libmocsy.a
@@ -96,20 +95,20 @@ $(library):  $(OBJS)
 	ar cr $(library) $(OBJS)
 
 # Build the Fortran program executable that tests the mocsy library (test_mocsy)
-#$(EXEC): $(TOBJS) $(library)
-#	$(FC) $(FCFLAGS) -o $(EXEC) $(TOBJS) 
-$(EXEC): $(OBJS) $(library) 
-	$(FC) $(FCFLAGS) -o $@ $@.f90 $(LDFLAGS)
+$(EXEC): $(EXEC).o $(OBJS) $(library) 
+	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS)
 
 # Build the shared object file for python
 mocsy.so: $(OBJS)
+	cp src/*.f90 .
 	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
+	rm $(SOURCES)
+
 #---------------------------------------------------------------------------
 
 # Other test programs
-test_solgas:  $(OBJS) test_solgas.o $(library) 
-	${FC} ${FCFLAGS} -o $@ $@.f90 $(LDFLAGS)
-
+test_solgas: test_solgas.o $(OBJS) $(library) 
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
 # General rule for building prog from prog.o; $^ (GNU extension) is
 # used in order to list additional object files on which the
