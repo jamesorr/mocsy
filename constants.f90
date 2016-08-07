@@ -279,19 +279,19 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
 !          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
-        tempot68 = (tempot - 0.0002) / 0.99975
+        tempot68 = (tempot - 0.0002_rx) / 0.99975_rx
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
         tempis68 = sw_temp(sal(i), tempot68, p, SGLE(0.0D0) )
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
-        tempis = 0.99975*tempis68 + 0.0002
+        tempis = 0.99975*tempis68 + 0.0002_rx
 !       Note: parts (a) and (c) above are tiny corrections;
 !             part  (b) is a big correction for deep waters (but zero at surface)
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis    = temp(i)
-        tempis68  = (temp(i) - 0.0002) / 0.99975
+        tempis68  = (temp(i) - 0.0002_rx) / 0.99975_rx
         dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
-        dtempot   = 0.99975*dtempot68 + 0.0002
+        dtempot   = 0.99975_rx*dtempot68 + 0.0002_rx
      ELSE
         PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
         PRINT *,"you specified optT =", trim(optT) 
@@ -299,7 +299,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
      ENDIF
 
 !    Compute constants:
-     IF (temp(i) >= -5. .AND. temp(i) < 1.0e+2) THEN
+     IF (temp(i) >= -5. .AND. temp(i) < 1.0e+2_rx) THEN
 !       Test to indicate if any of input variables are unreasonable
         IF (      sal(i) < 0.  .OR.  sal(i) > 1e+3) THEN
            PRINT *, 'i, icount, temp, sal =', i, icount, temp(i), sal(i)
@@ -403,14 +403,14 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
 !         Millero (2010, Mar. Fresh Wat. Res.) (seawater pH scale)
           pK1o = 6320.813d0*invtk + 19.568224d0*dlogtk -126.34048d0
-          ma1 = 13.4038d0*sqrts + 0.03206d0*s - (5.242e-5)*s2
+          ma1 = 13.4038d0*sqrts + 0.03206d0*s - (5.242e-5_rx)*s2
           mb1 = -530.659d0*sqrts - 5.8210d0*s
           mc1 = -2.0664d0*sqrts
           pK1 = pK1o + ma1 + mb1*invtk + mc1*dlogtk
           K1(i) = 10.0d0**(-pK1) 
 
           pK2o = 5143.692d0*invtk + 14.613358d0*dlogtk -90.18333d0
-          ma2 = 21.3728d0*sqrts + 0.1218d0*s - (3.688e-4)*s2
+          ma2 = 21.3728d0*sqrts + 0.1218d0*s - (3.688e-4_r8)*s2
           mb2 = -788.289d0*sqrts - 19.189d0*s
           mc2 = -3.374d0*sqrts
           pK2 = pK2o + ma2 + mb2*invtk + mc2*dlogtk
