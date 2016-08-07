@@ -17,23 +17,23 @@ SUBROUTINE depth2press(depth, lat, pdbar, N)
   IMPLICIT NONE
 
   !> number of records
+!f2py intent(hide) n
   INTEGER, intent(in) :: N
 
 ! INPUT variables
   !> depth [m]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: depth
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: depth
   !> latitude [degrees]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: lat
-!f2py optional , depend(depth) :: n=len(depth)
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: lat
 
 ! OUTPUT variables:
   !> pressure [db]
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: pdbar
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pdbar
 
   !     Local variables
   INTEGER :: i
 
-! REAL(kind=r4) ::  p80
+! REAL(kind=rx) ::  p80
 ! EXTERNAL p80
 
   DO i = 1,N

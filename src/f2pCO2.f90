@@ -8,26 +8,32 @@ SUBROUTINE f2pCO2(fCO2, temp, Patm, p, N, pCO2)
   !    Purpose:
   !    Compute pCO2 from arrays of fCO2, in situ temp, atm pressure, & hydrostatic pressure
 
+#if USE_PRECISION == 2
+#   define SGLE(x)    (x)
+#else
+#   define SGLE(x)    REAL(x)
+#endif
+
   USE msingledouble
   IMPLICIT NONE
 
   !> number of records
+!f2py intent(hide) n
   INTEGER, intent(in) :: N
 
 ! INPUT variables
   !> oceanic fugacity of CO2 [uatm]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: fCO2
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: fCO2
   !> in situ temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> atmospheric pressure [atm]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> hydrostatic pressure [db]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: p
-!f2py optional , depend(pCO2) :: n=len(pCO2)
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: p
 
 ! OUTPUT variables:
   !> oceanic partial pressure of CO2 [uatm] 
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: pCO2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pCO2
 
 ! LOCAL variables:
   REAL(kind=r8) :: dfCO2, dtemp, tk, dPatm, prb
@@ -57,7 +63,7 @@ SUBROUTINE f2pCO2(fCO2, temp, Patm, p, N, pCO2)
      xc2 = (1.0d0 - xCO2approx)**2 
      fugcoeff = exp( Ptot*(B + 2.0d0*xc2*Del)/(Rgas_atm*tk) )
      dpCO2 = dfCO2 / fugcoeff
-     pCO2(i) = REAL(dpCO2)
+     pCO2(i) = SGLE(dpCO2)
   END DO
 
   RETURN

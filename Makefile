@@ -7,6 +7,25 @@
 #  James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, 91191 Gif-sur-Yvette, France
 #  15 January 2014
 
+#=======================================================================
+#                   define desired precision
+#=======================================================================
+
+# set to  2 if you wish results in DOUBLE precision
+# set to 1 or 0 if SINGLE
+PRECISION = 2
+#PRECISION = 1
+
+# mapping between Fortran and C types
+ifeq (${PRECISION}, 2)
+    KIND_MAP = kind_map_d
+else
+    KIND_MAP = kind_map_s
+endif
+
+#=======================================================================
+#=======================================================================
+
 # To use another Fortran compiler, replace "f95" in FC and F90 lines with your compiler command
 # For example, comment out 2 lines below with "f95" & uncomment the following 2 lines for "gfortran"
 #FC = fort77
@@ -18,10 +37,12 @@ F90 = gfortran
 #FC = ifort
 #F90 = ifort
 
+FCFLAGS = -fPIC -cpp -DUSE_PRECISION=$(PRECISION)
 #DEBUGFLAGS = -g
 #LDFLAGS = -L/usr/local/lib -lnetcdf -lnetcdff
 LDFLAGS = -L./ -lmocsy
 INCLUDEFLAGS = -I/usr/local/include .
+
 
 # List of executables to be built within the package
 PROGRAMS = libmocsy.a test_mocsy mocsy.so
@@ -50,6 +71,10 @@ SOURCES = singledouble.f90 \
           constants.f90 \
           varsolver.f90 \
           vars.f90 \
+          derivauto.f90 \
+          derivnum.f90 \
+          errors.f90 \
+          buffesm.f90 \
           p2fCO2.f90 \
           f2pCO2.f90 \
           gasx.f90 
@@ -68,6 +93,10 @@ OBJS =  singledouble.o \
         constants.o \
         varsolver.o \
         vars.o \
+	derivauto.o \
+	derivnum.o \
+	errors.o \
+        buffesm.o \
         p2fCO2.o \
         f2pCO2.o \
         gasx.o
@@ -91,22 +120,48 @@ library = libmocsy.a
 
 #---------------------------------------------------------------------------
 # Build the mocsy library containing the object files (not used, illustration only)
-$(library):  $(OBJS)
-	ar cr $(library) $(OBJS)
+$(library): DNAD.o $(OBJS)
+	ar cr $(library) DNAD.o $(OBJS)
 
 # Build the Fortran program executable that tests the mocsy library (test_mocsy)
-$(EXEC): $(EXEC).o $(OBJS) $(library) 
+#<<<<<<< HEAD:Makefile
+#$(EXEC): $(EXEC).o $(OBJS) $(library) 
+#	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS)
+#
+## Build the shared object file for python
+#mocsy.so: $(OBJS)
+#	cp src/*.f90 .
+#	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
+#	rm $(SOURCES)
+#=======
+$(EXEC): $(EXEC).o DNAD.o $(OBJS) test_mocsy.o $(library) 
 	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS)
 
 # Build the shared object file for python
-mocsy.so: $(OBJS)
+mocsy.so: DNAD.o $(SOURCES)
 	cp src/*.f90 .
-	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
+	# Select the kind map
+	cp -f -s $(KIND_MAP) .f2py_f2cmap
+	f2py -c $(SOURCES) skip: varsolver_dnad : skip: constants_dnad :        \
+	skip: sw_ptmp_dnad : skip: sw_temp_dnad : skip: sw_adtg_dnad :          \
+	skip: rho_dnad : skip: equation_at_dnad : skip: solve_at_general_dnad : \
+	DNAD.o -m mocsy --fcompiler=gnu95 --f90flags="$(FCFLAGS)"
 	rm $(SOURCES)
-
 #---------------------------------------------------------------------------
-
 # Other test programs
+test_errors:  $(LIBSRC_OBJECTS) test_errors.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+test_derivauto:  $(LIBSRC_OBJECTS) test_derivauto.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+test_derivnum:  $(LIBSRC_OBJECTS) test_derivnum.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+
+test_buffesm:  $(LIBSRC_OBJECTS) test_buffesm.o $(library) 
+	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+#>>>>>>> dnad:Makefile
+
 test_solgas: test_solgas.o $(OBJS) $(library) 
 	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
@@ -129,7 +184,7 @@ test_solgas: test_solgas.o $(OBJS) $(library)
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o *.mod *.so
+	rm -f *.o *.mod *.so *.a
 
 veryclean: clean
 	rm -f *~ $(PROGRAMS) 

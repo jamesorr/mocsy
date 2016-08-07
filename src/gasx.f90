@@ -100,6 +100,12 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !     p = pressure [decibars]; p = f(depth, latitude) if computed from depth [m] OR p = depth if [db]
   !     tempis  = in-situ temperature [degrees C]
 
+#if USE_PRECISION == 2
+#   define SGLE(x)    (x)
+#else
+#   define SGLE(x)    REAL(x)
+#endif
+
   USE msingledouble
   USE mvars
   USE mp2fCO2
@@ -108,29 +114,29 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 
 ! Input variables
   !>     number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
-  REAL(kind=r4), INTENT(in),    DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: temp
   !> salinity <b>[psu]</b>
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: sal
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
   !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: alk
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: alk
   !> dissolved inorganic carbon in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: dic
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: dic
   !> SiO2 concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: sil
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sil
   !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: phos
-!f2py optional , depend(sal) :: n=len(sal)
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: phos
   !> gas transfer velocity (piston velocity) at a Schmidt number of 660 <b>[m/s]</b>
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: kw660
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: kw660
   !> atmospheric mole fraction of CO2 <b>[ppm]</b>
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: xco2
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: xco2
   !> atmospheric pressure <b>[atm]</b>
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> thickness of the surface layer of the model <b>[m]</b> 
-  REAL(kind=r4), INTENT(in) :: dz1
+  REAL(kind=rx), INTENT(in) :: dz1
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
@@ -163,41 +169,41 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 
 ! Output variables:
   !> air-to-sea CO2 flux <b>[mol/(m^2 * s)]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: co2flux
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co2flux
   !> rate of change of surface DIC concentration <b>[mol/(m^3 * s)]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: co2ex
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co2ex
   !> difference of surface ocean pCO2 minus atmospheric pCO2 <b>[uatm]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: dpCO2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: dpCO2
   !> pH on the <b>total scale</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: ph
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: ph
   !> CO2 partial pressure <b>[uatm]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: pco2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pco2
   !> CO2 fugacity <b>[uatm]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: fco2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: fco2
   !> aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optCON
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: co2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co2
   !> bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: hco3
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: hco3
   !> carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: co3
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co3
   !> Omega for aragonite, i.e., the aragonite saturation state
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: OmegaA
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: OmegaA
   !> Omega for calcite, i.e., the calcite saturation state
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: OmegaC
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: OmegaC
   !> Revelle factor, i.e., dpCO2/pCO2 / dDIC/DIC
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: BetaD
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: BetaD
   !> in-situ density of seawater; rhoSW = f(s, t, p) in <b>[kg/m3]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: rhoSW
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: rhoSW
   !> pressure <b>[decibars]</b>; p = f(depth, latitude) if computed from depth [m] (when optP='m') OR p = depth [db] (when optP='db')
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: p
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: p
   !> in-situ temperature \b <b>[degrees C]</b>
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: tempis
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: tempis
 
 ! Local variables
   REAL(kind=r8) :: tk, invtk, dtemp
   REAL(kind=r8) :: tmp, K0, co2star, co2starair, kwco2
-  REAL(kind=r4), DIMENSION(N) :: pCO2atm, fCO2atm
-  REAL(kind=r4), DIMENSION(N) :: depth0, lat0
+  REAL(kind=rx), DIMENSION(N) :: pCO2atm, fCO2atm
+  REAL(kind=rx), DIMENSION(N) :: depth0, lat0
  
   INTEGER :: i
   INTEGER :: kcomp
@@ -274,11 +280,11 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 
 ! Compute flux, absolute rate of change of surface DIC, & Delta pCO2
   DO i = 1, N
-     IF (co3(i) .eq. 1.e20_r4) THEN
+     IF (co3(i) .eq. 1.e20_rx) THEN
 !       Masked values (land)
-        co2flux(i) = 1.e20_r4
-        co2ex(i)   = 1.e20_r4
-        dpco2(i)   = 1.e20_r4
+        co2flux(i) = 1.e20_rx
+        co2ex(i)   = 1.e20_rx
+        dpco2(i)   = 1.e20_rx
      ELSE
         dtemp = DBLE(temp(i))
         tk = dtemp + 273.15d0
@@ -294,7 +300,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 !       "Atmospheric" [CO2*], air-sea CO2 flux, sfc DIC rate of change, & Delta pCO2
         co2starair = K0 * DBLE(fco2atm(i)) * 1.0e-6_r8 * DBLE(rhoSW(i)) !Equil. [CO2*] for atm CO2 at Patm & sfc-water T,S [mol/m3]
         co2star = DBLE(co2(i))                                          !Oceanic [CO2*] in [mol/m3] from vars.f90
-        co2flux(i) = REAL(kwco2 * (co2starair - co2star))               !Air-sea CO2 flux [mol/(m2 * s)]
+        co2flux(i) = SGLE(kwco2 * (co2starair - co2star))               !Air-sea CO2 flux [mol/(m2 * s)]
         co2ex(i) = co2flux(i) / dz1                                     !Change in sfc DIC due to gas exchange [mol/[m3 * s)]
         dpco2(i) = pco2(i) - pco2atm(i)                                 !Delta pCO2 (oceanic - atmospheric pCO2) [uatm]
      ENDIF
@@ -318,18 +324,18 @@ SUBROUTINE pCO2atm2xCO2(pCO2atm, temp, salt, Patm, N, xCO2)
 
 ! INPUT variables
   !> atmospheric partial pressure of CO2 [uatm] 
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: pCO2atm
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pCO2atm
   !> in situ temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !> atmospheric pressure [atm]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
 !f2py optional , depend(temp) :: n=len(temp)
 
 ! OUTPUT variables:
   !> mole fraction of CO2 [ppm]
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: xCO2
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: xCO2
 
 ! LOCAL variables:
   REAL(kind=r8) :: dpCO2atm, dPatm
@@ -344,7 +350,7 @@ SUBROUTINE pCO2atm2xCO2(pCO2atm, temp, salt, Patm, N, xCO2)
      dpCO2atm  = DBLE(pCO2atm(i))
      dPatm     = DBLE(Patm(i))
      dxCO2     = dpCO2atm / (dPatm - pH20(i))
-     xCO2(i) = REAL(dxCO2)
+     xCO2(i) = SGLE(dxCO2)
   END DO
 
   RETURN
@@ -495,18 +501,18 @@ SUBROUTINE x2pCO2atm(xCO2, temp, salt, Patm, N, pCO2atm)
 
 ! INPUT variables
   !> mole fraction of CO2 [ppm]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: xCO2
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: xCO2
   !> in situ temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !> atmospheric pressure [atm]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: Patm
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
 !f2py optional , depend(temp) :: n=len(temp)
 
 ! OUTPUT variables:
   !> oceanic partial pressure of CO2 [uatm] 
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: pCO2atm
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pCO2atm
 
 ! LOCAL variables:
   REAL(kind=r8) :: dxCO2, dPatm
@@ -522,7 +528,7 @@ SUBROUTINE x2pCO2atm(xCO2, temp, salt, Patm, N, pCO2atm)
      dxCO2     = DBLE(xCO2(i))
      dPatm     = DBLE(Patm(i))
      dpCO2atm = (dPatm - pH20(i)) * dxCO2
-     pCO2atm(i) = REAL(dpCO2atm)
+     pCO2atm(i) = SGLE(dpCO2atm)
   END DO
 
   RETURN
@@ -667,9 +673,9 @@ SUBROUTINE vapress(temp, salt, N, vpsw)
 
 ! INPUT variables
   !> in situ temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
 !f2py optional , depend(temp) :: n=len(temp)
 
 ! OUTPUT variables:
