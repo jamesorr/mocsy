@@ -535,7 +535,7 @@ SUBROUTINE x2pCO2atm(xCO2, temp, salt, Patm, N, pCO2atm)
 END SUBROUTINE x2pCO2atm
 
 !>    Compute solubilities of CFC-11, CFC-12, SF6, CO2, and N20 at 1 atm pressure, i.e., Phi0 (atm), in mol L-1 atm-1 
-SUBROUTINE solgas(gasname, temp, salt, N, phi0)
+SUBROUTINE phizero(gasname, temp, salt, N, phi0)
   !    Purpose:
   !    Compute solubilities of CFC-11, CFC-12, SF6, CO2, and N20 at 1 atm pressure, i.e., Phi0 (atm), in mol L-1 atm-1 
   !    Phi0 = K0 * Cf * (Pa0 - pH20),
@@ -546,8 +546,8 @@ SUBROUTINE solgas(gasname, temp, salt, N, phi0)
   !    * pH20 is the water vapor pressure at saturation (also in atm), all described in Orr et al. (2016, GMDD).
 
   !    Usage: this routine must be called once for each gas, e.g.,
-  !           call solgas('co2', temp, salt, 20, phi0_co2)
-  !           call solgas('sf6', temp, salt, 20, phi0_sf6)
+  !           call phizero('co2', temp, salt, 20, phi0_co2)
+  !           call phizero('sf6', temp, salt, 20, phi0_sf6)
   
   ! James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, Université Paris Saclay, France
   ! 5 August 2016
@@ -621,7 +621,7 @@ SUBROUTINE solgas(gasname, temp, salt, N, phi0)
       CASE ('n2o')
           ig = 5
       CASE DEFAULT
-          PRINT *,"ERROR in 'solgas' routine in gasx.f90:"
+          PRINT *,"ERROR in 'phizero' routine in gasx.f90:"
           PRINT *,"'gasname' input var must be one of the following: 'cfc11', 'cfc12', 'sf6', 'co2', or 'n2o'"
           STOP
   END SELECT
@@ -658,7 +658,7 @@ SUBROUTINE solgas(gasname, temp, salt, N, phi0)
 !  Mar. Chem., 8, 347–359, 1980.
 
   RETURN
-END SUBROUTINE solgas
+END SUBROUTINE phizero
 
 !>    Compute vapor pressure of seawater (atm) following preocedure from Weiss & Price (1980)
 SUBROUTINE vapress(temp, salt, N, vpsw)

@@ -1,6 +1,6 @@
-!> \file test_solgas.f90
-!! \BRIEF Fortran 90 program to test solgas routine in gasx.f90
-PROGRAM test_solgas
+!> \file test_phizero.f90
+!! \BRIEF Fortran 90 program to test phizero routine in gasx.f90
+PROGRAM test_phizero
 
    USE msingledouble
    USE gasx
@@ -23,11 +23,11 @@ PROGRAM test_solgas
    sal(1)    = 34.0    
 
 !  Call
-   call solgas('cfc11', temp, sal, n, phi0_cfc11)
-   call solgas('cfc12', temp, sal, n, phi0_cfc12)
-   call solgas('sf6',   temp, sal, n, phi0_sf6)
-   call solgas('co2',   temp, sal, n, phi0_co2)
-   call solgas('n2o',   temp, sal, n, phi0_n2o)
+   call phizero('cfc11', temp, sal, n, phi0_cfc11)
+   call phizero('cfc12', temp, sal, n, phi0_cfc12)
+   call phizero('sf6',   temp, sal, n, phi0_sf6)
+   call phizero('co2',   temp, sal, n, phi0_co2)
+   call phizero('n2o',   temp, sal, n, phi0_n2o)
 
    write (*,*) "phi0_cfc11 = ", phi0_cfc11
    write (*,*) "phi0_cfc12 = ", phi0_cfc12
@@ -41,6 +41,6 @@ PROGRAM test_solgas
    write (*,*) '   Weiss & Price (1980), after correcting for density (using 1.028).'
 
    STOP
-END PROGRAM test_solgas
+END PROGRAM test_phizero
 
     
