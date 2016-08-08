@@ -13,7 +13,7 @@ PROGRAM test_solgas
    REAL(kind=r8), DIMENSION(1) :: phi0_cfc11, phi0_cfc12, phi0_sf6, phi0_co2, phi0_n2o
    
 !  Input variables
-   REAL(kind=r4), DIMENSION(1) :: temp, sal
+   REAL(kind=rx), DIMENSION(1) :: temp, sal
    
 !  Input at standard T and S
 !  temp(1)   = 25.0    

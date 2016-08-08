@@ -297,7 +297,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !       This is the case for most models and some data
 !       a) Convert the pot. temp on today's "ITS 90" scale to older IPTS 68 scale
 !          (see Dickson et al., Best Practices Guide, 2007, Chap. 5, p. 7, including footnote)
-        tempot68 = (tempot - 0.0002_r4) / 0.99975_r4
+        tempot68 = (tempot - 0.0002_rx) / 0.99975_rx
 !       b) Compute "in-situ Temperature" from "Potential Temperature" (both on IPTS 68)
         tempis68 = sw_temp(sal(i), SGLE(tempot68), p(i), SGLE(0.d0) )
 !       c) Convert the in-situ temp on older IPTS 68 scale to modern scale (ITS 90)
@@ -322,42 +322,42 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !    ================================================================
      IF (dic(i) > 0. .AND. dic(i) < 1.0e+4) THEN
 !       Test to indicate if any of input variables are unreasonable
-        IF (       sal(i) < 0.0_r4  &
-             .OR.  alk(i) < 0.0_r4  &
-             .OR.  dic(i) < 0.0_r4  &
-             .OR.  sil(i) < 0.0_r4  &
-             .OR. phos(i) < 0.0_r4  &
-             .OR.  sal(i) > 1e+3_r4 &
-             .OR.  alk(i) > 1e+3_r4 &
-             .OR.  dic(i) > 1e+3_r4 &
-             .OR.  sil(i) > 1e+3_r4 &
-             .OR. phos(i) > 1e+3_r4) THEN
+        IF (       sal(i) < 0.0_rx  &
+             .OR.  alk(i) < 0.0_rx  &
+             .OR.  dic(i) < 0.0_rx  &
+             .OR.  sil(i) < 0.0_rx  &
+             .OR. phos(i) < 0.0_rx  &
+             .OR.  sal(i) > 1e+3_rx &
+             .OR.  alk(i) > 1e+3_rx &
+             .OR.  dic(i) > 1e+3_rx &
+             .OR.  sil(i) > 1e+3_rx &
+             .OR. phos(i) > 1e+3_rx) THEN
            PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
                      i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
         ENDIF
 !       Zero out any negative salinity, phosphate, silica, dic, and alk
-        IF (sal(i) < 0.0_r4) THEN
-           ssal = 0.0_r4
+        IF (sal(i) < 0.0_rx) THEN
+           ssal = 0.0_rx
         ELSE
            ssal = sal(i)
         ENDIF
-        IF (phos(i) < 0.0_r4) THEN
-           sphos = 0.0_r4
+        IF (phos(i) < 0.0_rx) THEN
+           sphos = 0.0_rx
         ELSE
            sphos = phos(i)
         ENDIF
-        IF (sil(i) < 0.0_r4) THEN
-           ssil = 0.0_r4
+        IF (sil(i) < 0.0_rx) THEN
+           ssil = 0.0_rx
         ELSE
            ssil = sil(i)
         ENDIF
-        IF (dic(i) < 0.0_r4) THEN
-          sdic = 0.0_r4
+        IF (dic(i) < 0.0_rx) THEN
+          sdic = 0.0_rx
         ELSE
           sdic = dic(i)
         ENDIF
-        IF (alk(i) < 0.0_r4) THEN
-          salk = 0.0_r4
+        IF (alk(i) < 0.0_rx) THEN
+          salk = 0.0_rx
         ELSE
           salk = alk(i)
         ENDIF

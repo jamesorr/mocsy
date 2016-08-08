@@ -1,7 +1,7 @@
 #  -------------------
 #  Usage: 
-#         gmake clean
-#         gmake 
+#         make clean
+#         make 
 #  -------------------
 #  GNU_Makefile to COMPILE and LINK  test_mocsy.f90 and mocsy.f90
 #  James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, 91191 Gif-sur-Yvette, France
@@ -41,11 +41,11 @@ FCFLAGS = -fPIC -cpp -DUSE_PRECISION=$(PRECISION)
 #DEBUGFLAGS = -g
 #LDFLAGS = -L/usr/local/lib -lnetcdf -lnetcdff
 LDFLAGS = -L./ -lmocsy
-INCLUDEFLAGS = -I/usr/local/include .
+INCLUDEFLAGS = -I/usr/local/include -Isrc
 
 
 # List of executables to be built within the package
-PROGRAMS = libmocsy.a test_mocsy mocsy.so
+PROGRAMS = libmocsy.a mocsy.so test_mocsy test_errors test_derivauto test_derivnum test_buffesm test_solgas
 
 # "make" builds all
 all: $(PROGRAMS)
@@ -56,6 +56,8 @@ all: $(PROGRAMS)
 
 vpath %.f90 src
 vpath %     examples
+
+#vpath %.h src
 
 SOURCES = singledouble.f90 \
           sw_adtg.f90 \
@@ -112,12 +114,6 @@ library = libmocsy.a
 #%: %.o
 #	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
 
-# General Pattern rules for building prog.o from prog.f90 or prog.F90; $< is
-# used in order to list only the first prerequisite (the source file)
-# and not the additional prerequisites such as module or include files
-%.o: %.f90
-	$(FC) $(FCFLAGS) -c $<
-
 #---------------------------------------------------------------------------
 # Build the mocsy library containing the object files (not used, illustration only)
 $(library): DNAD.o $(OBJS)
@@ -141,26 +137,28 @@ $(EXEC): $(EXEC).o DNAD.o $(OBJS) test_mocsy.o $(library)
 mocsy.so: DNAD.o $(SOURCES)
 	cp src/*.f90 .
 	# Select the kind map
-	cp -f -s $(KIND_MAP) .f2py_f2cmap
+	cp -f -s src/$(KIND_MAP) .f2py_f2cmap
 	f2py -c $(SOURCES) skip: varsolver_dnad : skip: constants_dnad :        \
 	skip: sw_ptmp_dnad : skip: sw_temp_dnad : skip: sw_adtg_dnad :          \
 	skip: rho_dnad : skip: equation_at_dnad : skip: solve_at_general_dnad : \
 	DNAD.o -m mocsy --fcompiler=gnu95 --f90flags="$(FCFLAGS)"
-	rm $(SOURCES)
+	rm $(SOURCES) DNAD.f90
 #---------------------------------------------------------------------------
 # Other test programs
-test_errors:  $(LIBSRC_OBJECTS) test_errors.o $(library) 
-	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+#test_errors:  $(LIBSRC_OBJECTS) test_errors.o $(library) 
+#	${FC} ${FCFLAGS} -o $@ $@.f90 $(LDFLAGS)
 
-test_derivauto:  $(LIBSRC_OBJECTS) test_derivauto.o $(library) 
-	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+test_errors: test_errors.o $(OBJS) $(library) 
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
-test_derivnum:  $(LIBSRC_OBJECTS) test_derivnum.o $(library) 
-	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
+test_derivauto: test_derivauto.o $(OBJS) $(library) 
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
-test_buffesm:  $(LIBSRC_OBJECTS) test_buffesm.o $(library) 
-	${F90} ${F90FLAGS} -o $@ $@.f90 $(LDFLAGS)
-#>>>>>>> dnad:Makefile
+test_derivnum: test_derivnum.o $(OBJS) $(library) 
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+
+test_buffesm: test_buffesm.o $(OBJS) $(library) 
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
 test_solgas: test_solgas.o $(OBJS) $(library) 
 	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
@@ -175,10 +173,10 @@ test_solgas: test_solgas.o $(OBJS) $(library)
 # used in order to list only the first prerequisite (the source file)
 # and not the additional prerequisites such as module or include files
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $<
+	$(FC) $(FCFLAGS) $(INCLUDEFLAGS) -c $<
 
 %.o: %.F90
-	$(FC) $(FCFLAGS) -c $<
+	$(FC) $(FCFLAGS) $(INCLUDEFLAGS) -c $<
 
 # Utility targets
 .PHONY: clean veryclean

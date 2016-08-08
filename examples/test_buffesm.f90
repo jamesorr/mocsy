@@ -1,10 +1,10 @@
 !> \file test_mocsy.f90
 !! \BRIEF Fortran 90 program to test mocsy.f90
-PROGRAM test_mocsy
+PROGRAM test_buffesm
 
    USE msingledouble
    USE mvars
-   USE mbuffesm2
+   USE mbuffesm
    
    IMPLICIT NONE
 
@@ -51,7 +51,7 @@ PROGRAM test_mocsy
              optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2,         &  ! OPTIONS
              optKf='dg', optGAS=optGAS)                                                          
 
-   call buffesm2(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,                    &  ! OUTPUT
+   call buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,                    &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                                 &  ! INPUT
              optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2,             &  ! OPTIONS
              optKf='dg', optGAS=optGAS)                                                              
@@ -82,5 +82,5 @@ PROGRAM test_mocsy
  201 format(f7.4, 2f7.1, 3(e12.4), 3f7.2, f8.2, f7.1, f8.3, 6f13.9)
 
   STOP
-END PROGRAM test_mocsy
+END PROGRAM test_buffesm
 

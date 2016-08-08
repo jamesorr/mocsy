@@ -377,7 +377,7 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
 
 ! OUTPUT variables:
   !> piston velocity at 25°C [m/s], uncorrected by the Schmidt number for different temperatures
-  REAL(kind=r4), INTENT(out), DIMENSION(N) :: kw660
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: kw660
 
 ! LOCAL variables:
   REAL(kind=r8) :: a, xfac
@@ -562,9 +562,9 @@ SUBROUTINE solgas(gasname, temp, salt, N, phi0)
 
 ! INPUT variables
   !> in situ temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: temp
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: salt
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !f2py optional , depend(temp) :: n=len(temp)
   !> name of gas: 'cfc11', 'cfc12', 'sf6', 'co2', or 'n2o'
   CHARACTER(*), INTENT(in) :: gasname
@@ -728,9 +728,9 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
 
 ! INPUT variables
   !> surface temperature [C]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: T
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: T
   !> surface salinity [psu]
-  REAL(kind=r4), INTENT(in), DIMENSION(N) :: S
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: S
 !f2py optional , depend(temp) :: n=len(temp)
 
 ! OUTPUT variables:
@@ -803,6 +803,12 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
   !    Modified for OMIP:   James Orr, LSCE/IPSL France, 14 March 2015
   !    **********************************************************************
 
+#if USE_PRECISION == 2
+#   define SGLE(x)    (x)
+#else
+#   define SGLE(x)    REAL(x)
+#endif
+
   USE msingledouble
   IMPLICIT NONE
 
@@ -834,7 +840,7 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
   INTEGER :: i
   
 ! Dissolved O2 saturation concentraion [mol/m^3] (in equilibrium with atmosphere) at 1 atm pressure 
-  CALL o2sato(SNGL(T), SNGL(S), N, o2sat_1atm)
+  CALL o2sato(SGLE(T), SGLE(S), N, o2sat_1atm)
 
   DO i = 1, N
 !     Transfer velocity for O2 in m/s [4]
