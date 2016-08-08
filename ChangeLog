@@ -1,5 +1,9 @@
 ChangeLog
 
+version 2.3, 2016-08-08
+-----------------------------------
+- Addded ability to propagate uncertianties (errors) & compute buffer factors (derivnum & derivauto)
+
 version 2.2.1, 2016-08-06
 -----------------------------------
 - Streamlined directory structure with hope to eventually provide mocsy as a conda package
