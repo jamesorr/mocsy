@@ -1,5 +1,10 @@
 ChangeLog
 
+version 2.3.1, 2016-08-08
+-----------------------------------
+	- fixed packaging_boilerplate files
+	- 'import mocsy' fails due to mocsy/__init__.py file ; thus, moved it to mocsy/tmp directory
+	
 version 2.3, 2016-08-08
 -----------------------------------
 - Addded ability to propagate uncertianties (errors) & compute buffer factors (derivnum & derivauto)
