@@ -45,7 +45,7 @@ INCLUDEFLAGS = -I/usr/local/include -Isrc
 
 
 # List of executables to be built within the package
-PROGRAMS = libmocsy.a mocsy.so test_mocsy test_errors test_derivauto test_derivnum test_buffesm test_solgas
+PROGRAMS = libmocsy.a mocsy.so test_mocsy test_errors test_derivauto test_derivnum test_buffesm test_phizero test_kprime test_kzero
 
 # "make" builds all
 all: $(PROGRAMS)
@@ -160,7 +160,13 @@ test_derivnum: test_derivnum.o $(OBJS) $(library)
 test_buffesm: test_buffesm.o $(OBJS) $(library) 
 	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
-test_solgas: test_solgas.o $(OBJS) $(library) 
+test_phizero: test_phizero.o $(OBJS) $(library) 
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+
+test_kprime: test_kprime.o $(OBJS) $(library) 
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+
+test_kzero: test_kzero.o $(OBJS) $(library) 
 	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
 # General rule for building prog from prog.o; $^ (GNU extension) is

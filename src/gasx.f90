@@ -574,41 +574,35 @@ SUBROUTINE phizero(gasname, temp, salt, N, phi0)
   REAL(kind=r8), INTENT(out), DIMENSION(N) ::  phi0
 
 ! LOCAL variables:
-  ! Coefficients to compute Phi0 (depend on 'gasname' argument)  
-  REAL(kind=r8), DIMENSION(ngas) ::  a1, a2, a3, a4, b1, b2, b3
+  ! Coefficients to compute Phi0
+  REAL(kind=r8), DIMENSION(7,ngas) :: Phi0coeffs  !Array of coeffs (a1, a2, a3, a4, b1, b2, b3) times 3 gases
+  REAL(kind=r8), DIMENSION(ngas,7) :: a            !Transpose of above array
   ! Absolute temperature and salinity
   REAL(kind=r8) :: dsalt, tk, tk100, ln_phi0
 
   INTEGER :: i, ig
 
 ! Coefficients to compute solubilities (Phi0) of CFC-11, CFC-12, SF6, CO2, and N20
-! -------------------------------------------------------------------------------
+  ! ------------------------------------------------------------------------------------------
   ! Coefficients a1, a2, a3, a4, b1, b2, & b3 from Table 3 of Orr et al. (2016).
   ! These are used to compute Phi0 for each gas following Eq. (15) in same paper.
-! -------------------------------------------------------------------------------
-  !            a1       a2       a3      a4       b1         b2        b3
-  ! CFC-11 -229.9261 319.6552 119.4471 -1.39165 -0.142382   0.091459 -0.0157274
-  ! CFC-12 -218.0971 298.9702 113.8049 -1.39165 -0.143566   0.091015 -0.0153924
-  ! SF6    -80.0343  117.232   29.5817  0.0      0.0335183 -0.0373942 0.00774862
-  ! CO2    -160.7333 215.4152  89.8920 -1.47759  0.029941  -0.027455  0.0053407
-  ! N2O    -165.8806 222.8743  92.0792 -1.48425 -0.056235   0.031619 -0.0048472
+  ! ------------------------------------------------------------------------------------------
+  !                     a1        a2        a3       a4        b1          b2         b3
+  ! ------------------------------------------------------------------------------------------
+  DATA Phi0coeffs / -229.9261, 319.6552, 119.4471, -1.39165, -0.142382,   0.091459, -0.0157274,  & !CFC-11
+                    -218.0971, 298.9702, 113.8049, -1.39165, -0.143566,   0.091015, -0.0153924,  & !CFC-12
+                     -80.0343,  117.232,  29.5817,  0.0,      0.0335183, -0.0373942, 0.00774862, & !SF6
+                    -160.7333, 215.4152,  89.8920, -1.47759,  0.029941,  -0.027455,  0.0053407,  & !CO2
+                    -165.8806, 222.8743,  92.0792, -1.48425, -0.056235,   0.031619, -0.0048472   / !N2O
   ! -------------------------------------------------------------------------------
   ! * The originial publications providing these coefficients are
   ! * - Warner and Weiss (1985) for CFC-11 and CFC-12,
   ! * - Bullister et al. (2002) for SF6, and
   ! * - Weiss and Price (1980) for CO2 and N2O.
 
-  ! Transpose of above 'matrix' coefficients, for easy use in loop below
-  !            CFC-11       CFC-12         SF6           CO2           N20
-  DATA a1 / -229.9261d0,  -218.0971d0,  -80.0343d0,  -160.7333d0,  -165.8806d0/
-  DATA a2 /  319.6552d0,   298.9702d0,  117.232d0,    215.4152d0,   222.8743d0/
-  DATA a3 /  119.4471d0,   113.8049d0,   29.5817d0,    89.8920d0,    92.0792d0/
-  DATA a4 /   -1.39165d0,   -1.39165d0,   0.0d0,       -1.47759d0,   -1.48425d0/
-  DATA b1 /   -0.142382d0,   -0.143566d0,  0.0335183d0,  0.029941d0,   -0.056235d0/
-  DATA b2 /    0.091459d0,   0.091015d0, -0.0373942d0, -0.027455d0,   0.031619d0/
-  DATA b3 /   -0.0157274d0, -0.0153924d0, 0.00774862d0, 0.0053407d0, -0.0048472d0/
+  a = TRANSPOSE(Phi0coeffs)
 
-! Set value of the index that refers to to each gasname
+  ! Set value of the index that refers to to each gasname
   SELECT CASE (trim(gasname))
       CASE ('cfc11')
           ig = 1
@@ -632,33 +626,191 @@ SUBROUTINE phizero(gasname, temp, salt, N, phi0)
       dsalt = DBLE(salt(i))             
       tk100 = tk/100.d0
       ! Phi0 for the chosen gas:
-      ln_phi0 = a1(ig) + a2(ig)/tk100 + a3(ig)*log(tk100) + a4(ig)*tk100**2   &
-           + dsalt * (b1(ig) + b2(ig)*tk100 + b3(ig)*tk100**2 )
+      ln_phi0 = a(ig,1) + a(ig,2)/tk100 + a(ig,3)*log(tk100) + a(ig,4)*tk100**2  &
+              + dsalt * (a(ig,5) + a(ig,6)*tk100 + a(ig,7)*tk100**2 )
       phi0(i) = exp(ln_phi0)
   END DO
 
-! REFERENCES
-!
-!  Bullister, J. L., Wisegarver, D. P., and Menzia, F. A.: The solubility of
-!  sulfur hexafluoride in water and seawater, Deep-Sea Res. I, 49, 175 –187, 2002.
-!
-!  Orr, J. C., Najjar, R. G., Aumount, O., Bopp, L., Bullister, J. L.,
-!  Danabasoglu, G., Doney, S. C., Dunne, J. P., Dutay, J.-C., Graven,
-!  H., Griffies, S. M., John, J. G., Joos, F., Levin, I., Lindsay, K.,
-!  Matear, R. J., McKinley, G. A., Mouchet, A., Oschlies, A., Romanou,
-!  A., Schlitzer, R., Tagliabue, A., Tanhua, T., and Yool, A.:
-!  Biogeochemical protocols and diagnostics for the CMIP6 Ocean Model
-!  Intercomparison Project (OMIP), Geosci. Model Dev. Discuss.,
-!  doi:10.5194/gmd-2016-155, in review, 2016.
-!
-!  Warner, M. J. and Weiss, R. F.: Solubilities of chlorofluorocarbons 11 and 12
-! in water and seawater, Deep-Sea Res. Part A., 32, 1485–1497, 1985 .
-!
-!  Weiss, R. F. and Price, B. A.: Nitrous oxide solubility in water and seawater,
-!  Mar. Chem., 8, 347–359, 1980.
-
   RETURN
 END SUBROUTINE phizero
+
+!>    Compute K' of CFC-11, CFC-12, and SF6; units are in mol L-1 atm-1 
+SUBROUTINE kprime(gasname, temp, salt, N, kp)
+  !    Purpose:
+  !    Compute K' of CFC-11, CFC-12, and SF6; units are in mol L-1 atm-1 
+  !    To avoid confusion this can be used directly in the ocean solubility equation
+  !    (Eq 21 from Orr et al., 2016) and in the atmospheric saturation equation (Eq 14),
+  !    The atmospheric saturation would then need to separately account for atmospheric pressure 
+  !    and humidity (vapress routine).
+
+  !    Usage: this routine should be called once for each gas, e.g.,
+  !           call kprime('cfc11', temp, salt, 20, kp_cfc11)
+  !           call kprime('cfc12', temp, salt, 20, kp_cfc12)
+  !           call kprime('sf6',   temp, salt, 20, kp_sf6)
+  
+  ! James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, Université Paris Saclay, France
+  ! 8 August 2016
+  
+  USE msingledouble
+  IMPLICIT NONE
+
+  INTEGER, PARAMETER :: ngas = 3
+  
+  !> number of records
+  INTEGER, intent(in) :: N
+
+! INPUT variables
+  !> in situ temperature [C]
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
+  !> salinity [psu]
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
+  !f2py optional , depend(temp) :: n=len(temp)
+
+  !> name of gas: 'cfc11', 'cfc12', or 'sf6'
+  CHARACTER(*), INTENT(in) :: gasname
+
+! OUTPUT variables:
+  !> solubility of gas in seawater, in units of [mol L-1 atm-1] 
+  REAL(kind=r8), INTENT(out), DIMENSION(N) ::  kp
+
+! LOCAL variables:
+  ! Coefficients to compute K' 
+  REAL(kind=r8), DIMENSION(6,ngas) :: Kpcoeffs  !Array of coeffs (a1, a2, a3, b1, b2, b3) times 3 gases
+  REAL(kind=r8), DIMENSION(ngas,6) :: a         !Transpose of above array
+  ! Absolute temperature and salinity
+  REAL(kind=r8) :: dsalt, tk, tk100, ln_kp
+
+  INTEGER :: i, ig
+
+  ! -------------------------------------------------------------------------------
+  ! Input array of coefficients (top half of Table 3 of Orr et al. (2016, GMDD)
+  ! These are used to compute K' for each gas following Eq. (24) in same paper.
+  ! -------------------------------------------------------------------------------
+  !                   a1        a2       a3       b1          b2         b3
+  ! -------------------------------------------------------------------------------
+  DATA Kpcoeffs / -134.1536, 203.2156, 56.2320, -0.144449,   0.092952, -0.0159977,   &  !CFC-11
+                  -122.3246, 182.5306, 50.5898, -0.145633,   0.092509, -0.0156627,   &  !CFC-12
+                   -96.5975, 139.883,  37.8193,  0.0310693, -0.0356385, 0.00743254   /  !SF6
+  ! -------------------------------------------------------------------------------
+  ! * The originial publications providing these coefficients are
+  ! * - Warner and Weiss (1985) for CFC-11 and CFC-12, and
+  ! * - Bullister et al. (2002) for SF6, and
+
+  a = TRANSPOSE(Kpcoeffs)
+
+  write(*,*)'gasname = ', gasname
+! Set value of the index that refers to to each gasname
+  SELECT CASE (trim(gasname))
+      CASE ('cfc11')
+          ig = 1
+      CASE ('cfc12')
+          ig = 2
+      CASE ('sf6')
+          ig = 3
+      CASE DEFAULT
+          PRINT *,"ERROR in 'kprime' routine in gasx.f90:"
+          PRINT *,"'gasname' input var must be one of the following: 'cfc11', 'cfc12', or 'sf6'"
+          STOP
+  END SELECT
+
+! Compute K' 
+  DO i = 1, N
+      tk = 273.15d0 + DBLE(temp(i))     !Absolute temperature (Kelvin)
+      dsalt = DBLE(salt(i))             
+      tk100 = tk/100.d0
+      ! Phi0 for the chosen gas:
+      ln_kp = a(ig,1) + a(ig,2)/tk100 + a(ig,3)*log(tk100)                   &
+            + dsalt * (a(ig,4) + a(ig,5)*tk100 + a(ig,6)*tk100**2 )
+      kp(i) = exp(ln_kp)
+  END DO
+
+  RETURN
+END SUBROUTINE kprime
+
+!>    Compute K0 of CO2 and N20; units are in mol L-1 atm-1 
+SUBROUTINE kzero(gasname, temp, salt, N, k0)
+  !    Purpose:
+  !    Compute K0 of CO2 and N20; units are in mol L-1 atm-1 
+  !    Uses same form of the equation 24 (given for K') in Orr et al. (2016)
+
+  !    Usage: this routine should be called once for each gas, e.g.,
+  !           call kzero('co2', temp, salt, 20, k0_co2)
+  !           call kzero('n2o', temp, salt, 20, kp_n2o)
+  
+  ! James Orr, LSCE/IPSL, CEA-CNRS-UVSQ, Université Paris Saclay, France
+  ! 8 August 2016
+  
+  USE msingledouble
+  IMPLICIT NONE
+
+  INTEGER, PARAMETER :: ngas = 2
+  
+  !> number of records
+  INTEGER, intent(in) :: N
+
+! INPUT variables
+  !> in situ temperature [C]
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
+  !> salinity [psu]
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
+  !f2py optional , depend(temp) :: n=len(temp)
+
+  !> name of gas: 'co2' or 'n2o'
+  CHARACTER(*), INTENT(in) :: gasname
+
+! OUTPUT variables:
+  !> solubility of gas in seawater, in units of [mol L-1 atm-1] 
+  REAL(kind=r8), INTENT(out), DIMENSION(N) ::  k0
+
+! LOCAL variables:
+  ! Coefficients to compute K' 
+  REAL(kind=r8), DIMENSION(6,ngas) :: K0coeffs  !Array of coeffs (a1, a2, a3, b1, b2, b3) times 3 gases
+  REAL(kind=r8), DIMENSION(ngas,6) :: a         !Transpose of above array
+  ! Absolute temperature and salinity
+  REAL(kind=r8) :: dsalt, tk, tk100, ln_k0
+
+  INTEGER :: i, ig
+
+  ! -------------------------------------------------------------------------------
+  ! Input array of coefficients (bottom half of Table 3 of Orr et al. (2016, GMDD)
+  ! These are used to compute K' for each gas following Eq. (24) in same paper.
+  ! -------------------------------------------------------------------------------
+  !                   a1        a2       a3       b1          b2         b3
+  ! -------------------------------------------------------------------------------
+  DATA K0coeffs /  -58.0931,  90.5069, 22.2940,  0.027766,  -0.025888,  0.0050578,   &  ! CO2
+                   -62.7062,  97.3066, 24.1406, -0.058420,   0.033193,  -0.0051313   /  !N2O
+  ! -------------------------------------------------------------------------------
+  ! * The originial publications providing these coefficients are
+  ! * - Weiss (1974, Table 1, column 1) for CO2
+  ! * - Weiss and Price (1980, Table 2, column 1) for N2O
+
+  a = TRANSPOSE(K0coeffs)
+
+! Set value of the index that refers to to each gasname
+  SELECT CASE (trim(gasname))
+      CASE ('co2')
+          ig = 1
+      CASE ('n2o')
+          ig = 2
+      CASE DEFAULT
+          PRINT *,"ERROR in 'kzero' routine in gasx.f90:"
+          PRINT *,"'gasname' input var must be one of the following: 'co2' or 'n2o'"
+          STOP
+  END SELECT
+
+! Compute K0
+  DO i = 1, N
+      tk = 273.15d0 + DBLE(temp(i))     !Absolute temperature (Kelvin)
+      dsalt = DBLE(salt(i))             
+      tk100 = tk/100.d0
+      ! k0 for the chosen gas:
+      ln_k0 = a(ig,1) + a(ig,2)/tk100 + a(ig,3)*log(tk100)                   &
+            + dsalt * (a(ig,4) + a(ig,5)*tk100 + a(ig,6)*tk100**2 )
+      k0(i) = exp(ln_k0)
+  END DO
+
+  RETURN
+END SUBROUTINE kzero
 
 !>    Compute vapor pressure of seawater (atm) following preocedure from Weiss & Price (1980)
 SUBROUTINE vapress(temp, salt, N, vpsw)
@@ -857,4 +1009,24 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
 END SUBROUTINE o2flux
 
 END MODULE gasx
+
+! REFERENCES
+!
+!  Bullister, J. L., Wisegarver, D. P., and Menzia, F. A.: The solubility of
+!  sulfur hexafluoride in water and seawater, Deep-Sea Res. I, 49, 175 –187, 2002.
+!
+!  Orr, J. C., Najjar, R. G., Aumount, O., Bopp, L., Bullister, J. L.,
+!  Danabasoglu, G., Doney, S. C., Dunne, J. P., Dutay, J.-C., Graven,
+!  H., Griffies, S. M., John, J. G., Joos, F., Levin, I., Lindsay, K.,
+!  Matear, R. J., McKinley, G. A., Mouchet, A., Oschlies, A., Romanou,
+!  A., Schlitzer, R., Tagliabue, A., Tanhua, T., and Yool, A.:
+!  Biogeochemical protocols and diagnostics for the CMIP6 Ocean Model
+!  Intercomparison Project (OMIP), Geosci. Model Dev. Discuss.,
+!  doi:10.5194/gmd-2016-155, in review, 2016.
+!
+!  Warner, M. J. and Weiss, R. F.: Solubilities of chlorofluorocarbons 11 and 12
+! in water and seawater, Deep-Sea Res. Part A., 32, 1485–1497, 1985 .
+!
+!  Weiss, R. F. and Price, B. A.: Nitrous oxide solubility in water and seawater,
+!  Mar. Chem., 8, 347–359, 1980.
 
