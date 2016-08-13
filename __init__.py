@@ -2,8 +2,12 @@ from __future__ import absolute_import
 
 from ._mocsy import (
     gasx,
+    mbuffesm,
     mconstants,
     mdepth2press,
+    mderivauto,
+    mderivnum,
+    merrors,
     mf2pco2,
     mp2fco2,
     mp80,
