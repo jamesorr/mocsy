@@ -64,6 +64,11 @@ sources = [
     'src/vars.f90',
     'src/depth2press.f90',
     'src/f2pCO2.f90',
+    'src/buffesm.f90',
+    'src/DNAD.f90',
+    'src/derivauto.f90',
+    'src/derivnum.f90',
+    'src/errors.f90',
     'src/gasx.f90',
     ]
 
