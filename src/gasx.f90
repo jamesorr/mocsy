@@ -324,7 +324,7 @@ SUBROUTINE pCO2atm2xCO2(pCO2atm, temp, salt, Patm, N, xCO2)
 
 ! INPUT variables
   !> atmospheric partial pressure of CO2 [uatm] 
-  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pCO2atm
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: pCO2atm
   !> in situ temperature [C]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
@@ -370,9 +370,9 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
 
 ! INPUT variables
   !> wind speed at 10-m height
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: windspeed
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: windspeed
   !> modeled sea-ice cover: fraction of grid cell, varying between 0.0 (no ice) and 1.0 (full cover)
-  REAL(kind=r8), INTENT(out), DIMENSION(N) :: Fice
+  REAL(kind=r8), INTENT(in), DIMENSION(N) :: Fice
 !f2py optional , depend(windspeed) :: n=len(windspeed)
 
 ! OUTPUT variables:
