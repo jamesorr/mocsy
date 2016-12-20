@@ -318,7 +318,7 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
          ENDIF
 
 !        Add the 3 parts of Segle
-         Segle  = SegleCBW + SeglePt + Segle
+         Segle  = SegleCBW + SeglePt + SegleSit
 
          !print *, 'hco3, co3, h, Borate, Kb, oh = ', hco3(i), co3(i), h, Borate, Kb(i), oh 
          !print *, 'h3po4, h2po4, hpo4, po4 =', h3po4, h2po4, hpo4, po4
