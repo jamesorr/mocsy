@@ -45,7 +45,8 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !     derivar = 3-lowercase-character identifier of input variable with respect to which derivative is requested
   !               possibilities are 'alk', 'dic', 'pho', 'sil', 'tem', 'sal'
   !               and dissociation constants 'k0', 'k1', 'k2', 'kw', 'kb', 'ka', 'kc'
-  !               The last one are the constants of solubility product for Aragonite and Calcite
+  !               and total dissolved inorganic boron 'bt"
+  !               The last two of the k's (constants) are the solubility products for Aragonite and Calcite
   !
   !     INPUT options:
   !     ==============
@@ -322,9 +323,13 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
       CASE ('kc')
           var_index = 7
           deriv_K   = .TRUE.
+      CASE ('bt')
+          ! For Bt (propotional to S): call vars_pertK but treat slightly differently than other constants   
+          var_index = 8
+          deriv_K   = .FALSE.
       CASE DEFAULT
           PRINT *,"derivar must be 3-char variable: 'alk', 'dic', 'pho', 'sil', 'tem', or 'sal'"
-          PRINT *," or a 2-char dissoc. constant name : 'k0', 'k1', 'k2', 'kb', 'kw', 'ka', 'kc'"
+          PRINT *," or a 2-char dissoc. constant name : 'k0', 'k1', 'k2', 'kb', 'kw', 'ka', 'kc', 'bt'"
           STOP
   END SELECT
   
@@ -384,6 +389,10 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
             CASE (6)
                 input_value = sal(i)
                 rel_delta_x = 1.0d-4
+            CASE (8)
+                ! For Bt (propotional to salinity)    
+                input_value = 0.0002414d0 * (sal(i) / 1.80655d0) / 10.811d0
+                rel_delta_x = 1.0d-3
         END SELECT
 
         ! Determine two slightly different values of selected input value
@@ -391,7 +400,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
         ainput1(1) = input_value - abs_delta
         ainput2(1) = input_value + abs_delta
         ! Compute total absolue delta
-        dX = ainput2(1) - ainput1(1)
+        dx = ainput2(1) - ainput1(1)
     
         ! Call routine vars() twice with two slightly different values of selected input
         SELECT CASE (var_index)
@@ -449,6 +458,20 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, ainput2, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
                                 optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+            CASE (8)
+                ! For Bt (must treat with vars_pertK, but not quite like other 'constants' to account for proportionality to S)
+                ! Call routine vars_pertK() with request to increase one Bt value
+                call vars_pertK(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),      &
+                                OmegaA(:,1), OmegaC(:,1),                                          &
+                                atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                                var_index, -abs_delta,                                             &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+                ! Call routine vars_pertK() with request to decrease the same Bt value
+                call vars_pertK(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),      &
+                                OmegaA(:,2), OmegaC(:,2),                                          &
+                                atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
+                                var_index, abs_delta,                                              &
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
         END SELECT
     ENDIF
     

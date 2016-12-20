@@ -494,8 +494,8 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
   !     INPUT variables:
   !     ================
   !     same as routine vars() above,     plus :
-  !     var_index  =   numerical id of dissociation constant to perturb
-  !                    an index (1...7) from the list : K0, K1, K2, Kb, Kw, Kspa, Kspc
+  !     var_index  =   numerical id of dissociation constant (and total boron) to perturb
+  !                    an index (1...8) from the list : K0, K1, K2, Kb, Kw, Kspa, Kspc, Bt
   !     abs_delta  =   perturbation value
   !
   !     INPUT options:
@@ -808,6 +808,8 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
                 aKspa(1) = aKspa(1) + abs_delta
             CASE (7)
                 aKspc(1) = aKspc(1) + abs_delta
+            CASE (8)
+                aBt(1) = aBt(1) + abs_delta
         END SELECT
 
 !       Either convert units of DIC and ALK (MODEL case) or not (DATA case)

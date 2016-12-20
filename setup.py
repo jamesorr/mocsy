@@ -69,7 +69,7 @@ sources = [
     'src/derivauto.f90',
     'src/derivnum.f90',
     'src/errors.f90',
-    'src/gasx.f90',
+    'src/gasx.f90'
     ]
 
 config = Configuration('')

@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 from ._mocsy import (
-    gasx,
     mbuffesm,
     mconstants,
     mdepth2press,
@@ -21,7 +20,8 @@ from ._mocsy import (
     mtis,
     mtpot,
     mvars,
-    mvarsolver
+    mvarsolver,
+    gasx
     )
 
 __version__ = "2.3.1"

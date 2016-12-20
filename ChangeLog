@@ -1,5 +1,12 @@
 ChangeLog
 
+version 2.3.3, 2016-09-13
+-----------------------------------
+	- changed 'intent(OUT)' to 'intent(IN) to some variables in 2 subroutines in gasx.f90
+	- fixed bug in buffesm.f90 (caused contrib from SiT to be neglected)
+	- added Method of moments to errors.f90 ?
+	- added uncertainty from total boron to error propgation
+
 version 2.3.2, 2016-08-15
 -----------------------------------
 	- new routines to compute K'(kprime)  and K0 (kzero); phizero revised
