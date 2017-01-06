@@ -27,7 +27,7 @@ from ._mocsy import (
 __version__ = "2.3.1"
 
 __all__ = [
-    'gasx',
+    'mbuffesm',
     'mconstants',
     'mdepth2press',
     'mf2pco2',
@@ -43,5 +43,6 @@ __all__ = [
     'mtis',
     'mtpot',
     'mvars',
-    'mvarsolver'
+    'mvarsolver',
+    'gasx'
     ]
