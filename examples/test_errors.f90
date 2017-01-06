@@ -13,7 +13,7 @@ PROGRAM test_errors
 !  Input variables
    REAL(kind=rx), DIMENSION(6) :: temp, sal, alk, dic, sil, phos, Patm, depth, lat
    REAL(kind=rx), DIMENSION(6) :: temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e
-   REAL(kind=rx), DIMENSION(7) :: epK
+   REAL(kind=rx), DIMENSION(8) :: epK
    
 !  Input options
    CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2
@@ -81,7 +81,7 @@ PROGRAM test_errors
    END DO
 
    write (*,*) "Test 3: Default error on constants"
-   epK = (/0.002, 0.01, 0.02, 0.01, 0.01, 0.01, 0.01/)
+   epK = (/0.004, 0.015, 0.03, 0.01, 0.01, 0.02, 0.02, 0.01/)
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
              temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
