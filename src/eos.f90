@@ -57,7 +57,6 @@ SUBROUTINE sa2sp_chem(SA, TA, DIC, NO3, SIOH4, N, SP)
 !      
 
 USE msingledouble
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 
 IMPLICIT NONE
@@ -157,7 +156,6 @@ SUBROUTINE sa2sp_geo(SA, N, SP, P, long, lat)
 !      
 
 USE msingledouble
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 
 IMPLICIT NONE
@@ -183,12 +181,6 @@ IMPLICIT NONE
   REAL(kind=r8) :: def_lat, def_long
   INTEGER :: i
   
-  ! gsw_saar_init must be called once before gsw_sp_from_sa
-  IF (.not. saar_loaded) THEN
-     ! when it is called, variable "saar_loaded" (in module gsw_mod_saar_data) is automatically set to .TRUE.
-     CALL gsw_saar_init(.FALSE.)
-  ENDIF
- 
   IF (PRESENT(lat) .AND. PRESENT(long)) THEN
      IF (PRESENT(P)) THEN
         DO i = 1, N
@@ -266,7 +258,6 @@ SUBROUTINE sp2sa_chem(SP, TA, DIC, NO3, SIOH4, N, SA)
 !         sp2sa_chem(35, 0.00234, 0.00202, 1, SA)
 !
 
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 USE msingledouble
 
@@ -360,7 +351,6 @@ SUBROUTINE sp2sa_geo(SP, N, SA, P, long, lat)
 !         ! depth is 10 dbar and location is 188 degrees East and 4 degrees North.
 !         CALL sp2sa_geo(35, 1, SA, 10, 188, 4)
 
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 USE msingledouble
 
@@ -387,12 +377,6 @@ IMPLICIT NONE
   REAL(kind=r8) :: def_lat, def_long
   INTEGER :: i
 
-  ! gsw_saar_init must be called once before gsw_sa_from_sp
-  IF (.not. saar_loaded) THEN
-     ! when it is called, variable "saar_loaded" (in module gsw_mod_saar_data) is automatically set to .TRUE.
-     CALL gsw_saar_init(.FALSE.)
-  ENDIF
-  
   IF (PRESENT(lat) .AND. PRESENT(long)) THEN
      IF (PRESENT(P)) THEN
         DO i = 1, N
@@ -476,7 +460,6 @@ SUBROUTINE teos2eos_chem(SA, CVT, P, TA, DIC, NO3, SIOH4, N, T, SP)
 !         CALL teos2eos_chem(35, 18, 0, 0.00234, 0.00202, 0, 0, 1, T, SP)
 !      
 
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 USE msingledouble
 
@@ -567,7 +550,6 @@ SUBROUTINE teos2eos_geo(SA, CvT, P, N, T, SP, long, lat)
 !         CALL teos2eos_geo(35, 18, 10, 1, T, SP, 188, 4)
 !      
 
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 USE msingledouble
 
@@ -657,7 +639,6 @@ SUBROUTINE eos2teos_geo(SP, T, P, N, CvT, SA, long, lat)
 !         ! depth is 10 dbar and location is 188 degrees East and 4 degrees North.
 !         call eos2teos_geo(35, 18, 10, 188, 4, 1, CvT, SA)
 ! 
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 USE msingledouble
 
@@ -759,7 +740,6 @@ SUBROUTINE eos2teos_chem(SP, T, P, TA, DIC, NO3, SIOH4, N, CvT, SA)
 !         call eos2teos_chem(35, 18, 0, 0.00234, 0.00202, 0, 0, 1, CvT, SA)
 !      
 
-USE gsw_mod_saar_data, only: saar_loaded
 USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_from_ct
 USE msingledouble
 
