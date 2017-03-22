@@ -11,7 +11,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
                      St, Ft, Bt,                              &
                      temp, sal, Patm,                         &
                      depth, lat, N,                           &
-                     optT, optP, optB, optK1K2, optKf, optGAS)
+                     optT, optP, optB, optK1K2, optKf, optGAS, optS, lon )
 
   !   Purpose:
   !     Compute thermodynamic constants
@@ -28,11 +28,12 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
   !     ---------
-  !     optT: choose in situ vs. potential temperature as input
+  !     optT: choose in-situ, potential or conservative temperature as input
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
-  !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
-  !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
+  !       -> 'Tpot' means input is pot. Temperature (in situ Temp is computed)
+  !       -> 'Tcsv' means input is Conservative Temperature (in situ Temp is computed)
+  !       -> 'Tinsitu' means input is already in-situ Temperature
   !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
   !     ---------
@@ -69,6 +70,25 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
   !                      considers in situ T & total pressure (atm + hydrostatic)
   !     ---------
+  !     optS: choose practical [psu] or absolute [g/kg] salinity as input
+  !     ----------
+  !       -> 'Sprc' means input is practical salinity according to EOS-80 convention
+  !       -> 'Sabs' means input is absolute salinity according to TEOS-10 convention (practical sal. will be computed)
+  !     ---------
+  !     lon:  longitude in degrees East
+  !     ----------
+  !        Optional, it may be used along with latitude when optS is "Sabs" as conversion parameters 
+  !           from Absolute to Practical Salinity.
+  !
+  !        When seawater is not of standard composition, Practical Salinity alone is not sufficient 
+  !        to compute Absolute Salinity and vice-versa. One needs to know the chemical composition, 
+  !        mainly silicate and nitrate concentration. When parameters 'lon' and 'lat' are given, 
+  !        absolute salinity conversion is based on WOA silicate concentration at given location. 
+  !
+  !        When 'lon' and 'lat' are unknown, an arbitrary geographic point is chosen:
+  !        which is mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
+  !        In that case, do not pass parameter 'lon' or set its elements to 1.e20.
+  !     ---------
 
   !     OUTPUT variables:
   !     =================
@@ -83,6 +103,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   USE msingledouble
   USE mp80
+  USE meos
+  USE gsw_mod_toolbox, only: gsw_t_from_ct
   USE msw_temp
   USE msw_ptmp
   IMPLICIT NONE
@@ -127,6 +149,11 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Ouput variables
   !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
@@ -192,11 +219,15 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   REAL(kind=r8) :: Phydro_atm, Patmd, Ptot, Rgas_atm, vbarCO2
 
+! local 1-long array version of scalar variables
+  REAL(kind=r8), DIMENSION(1) :: sa1, spra1, sabs1, s1, p1, lon1, lat1
+
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
 
   ! CONSTANTS
   ! =========
@@ -246,6 +277,11 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   ELSE
     opGAS = 'Pinsitu'
   ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
+  ENDIF
 
   R = 83.14472_r8
 
@@ -294,8 +330,22 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         tempis68  = (temp(i) - 0.0002_rx) / 0.99975_rx
         dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
         dtempot   = 0.99975_rx*dtempot68 + 0.0002_rx
+     ELSEIF (trim(optT) == 'Tcsv' .OR. trim(optT) == 'tcsv') THEN
+!       Convert given conservative temperature to in-situ temperature
+        ! First convert salinity to absolute sal., if necessary
+        IF (trim(opS) == 'Sprc')  THEN
+            ! conversion will use default geographic location
+            spra1(1) = DBLE(sal(i))
+            p1(1) = DBLE(p)
+            CALL sp2sa_geo (spra1, 1, sabs1, p1)
+        ELSE
+            sabs1(1) = DBLE(sal(i))
+        END IF
+        ! Then convert temperature
+        tempis = SGLE(gsw_t_from_ct (sabs1(1), DBLE(temp(i)), DBLE(p)))
+        tempis68  = (tempis - 0.0002_rx) / 0.99975_rx
      ELSE
-        PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
+        PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
         PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
@@ -325,8 +375,31 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !       Hydrostatic pressure (prb is in bars)
         prb = DBLE(p) / 10.0d0
 
-!       Salinity and simply related values
-        s = DBLE(ssal)
+!       Convert from Absolute to Practical salinity if needed
+        IF (trim(opS) == 'Sabs')  THEN
+           IF (PRESENT(lon)) THEN
+               ! longitude is passed in
+               sa1(1) = DBLE(ssal)
+               p1(1) = DBLE(p)
+               lon1(1) = DBLE(lon(i))
+               lat1(1) = DBLE(lat(i))
+           ELSE
+               lon1(1) = 1.e20_r8
+               lat1(1) = 1.e20_r8
+           ENDIF
+           IF (lon1(1) .NE. 1.e20_r8 .AND. lat1(1) .NE. 1.e20_r8) THEN
+              ! longitude and latitude are defined
+              CALL sa2sp_geo (sa1, 1, s1, p1, lon1, lat1)
+           ELSE
+              ! use default geographic location
+              CALL sa2sp_geo (sa1, 1, s1, p1)
+           ENDIF
+           s = DBLE(s1(1))
+        ELSE
+           s = DBLE(ssal)
+        ENDIF
+
+        ! Salinity and simply related values
         s2=s*s
         sqrts=SQRT(s)
         s15=s**1.5d0
@@ -641,7 +714,7 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
                      St, Ft, Bt,                              &
                      temp, sal, Patm,                         &
                      depth, lat, N,                           &
-                     optT, optP, optB, optK1K2, optKf, optGAS)
+                     optT, optP, optB, optK1K2, optKf, optGAS, optS, lon )
 
   !   Purpose:
   !     Compute thermodynamic constants
@@ -662,11 +735,12 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
   !     sal     = salinity in [psu]
   !     ---------
-  !     optT: choose in situ vs. potential temperature as input
+  !     optT: choose in-situ, potential or conservative temperature as input
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
-  !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
-  !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
+  !       -> 'Tpot' means input is pot. Temperature (in situ Temp is computed)
+  !       -> 'Tcsv' means input is Conservative Temperature (in situ Temp is computed)
+  !       -> 'Tinsitu' means input is already in-situ Temperature
   !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
   !     ---------
@@ -701,6 +775,25 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
   !                      considers in situ T & total pressure (atm + hydrostatic)
   !     ---------
+  !     optS: choose practical [psu] or absolute [g/kg] salinity as input
+  !     ----------
+  !       -> 'Sprc' means input is practical salinity according to EOS-80 convention
+  !       -> 'Sabs' means input is absolute salinity according to TEOS-10 convention (practical sal. will be computed)
+  !     ---------
+  !     lon:  longitude in degrees East
+  !     ----------
+  !        Optional, it may be used along with latitude when optS is "Sabs" as conversion parameters 
+  !           from Absolute to Practical Salinity.
+  !
+  !        When seawater is not of standard composition, Practical Salinity alone is not sufficient 
+  !        to compute Absolute Salinity and vice-versa. One needs to know the chemical composition, 
+  !        mainly silicate and nitrate concentration. When parameters 'lon' and 'lat' are given, 
+  !        absolute salinity conversion is based on WOA silicate concentration at given location. 
+  !
+  !        When 'lon' and 'lat' are unknown, an arbitrary geographic point is chosen:
+  !        which is mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
+  !        In that case, do not pass parameter 'lon' or set its elements to 1.e20.
+  !     ---------
 
   !     OUTPUT variables:
   !     =================
@@ -709,6 +802,8 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   USE msingledouble
   USE mp80
+  USE meos
+  USE gsw_mod_toolbox, only: gsw_t_from_ct
   USE msw_temp
   USE msw_ptmp
   USE Dual_Num_Auto_Diff
@@ -754,6 +849,11 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Ouput variables
   !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
@@ -821,11 +921,15 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
   TYPE (DUAL_NUM),PARAMETER:: zero=DUAL_NUM(0d0,0.D0), ten=DUAL_NUM(10d0,0.D0)
 
+! local 1-long array version of scalar variables
+  REAL(kind=r8), DIMENSION(1) :: sa1, s1, p1, lon1, lat1
+
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
 
   ! CONSTANTS
   ! =========
@@ -923,8 +1027,15 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         tempis68  = (temp(i) - 0.0002) / 0.99975
         dtempot68 = sw_ptmp_DNAD(sal(i), tempis68, p, zero )
         dtempot   = 0.99975*dtempot68 + 0.0002
+     ELSEIF (trim(optT) == 'Tcsv' .OR. trim(optT) == 'tcsv') THEN
+!       Convert given conservative temperature to in-situ temperature
+        tempis%x_ad_ = gsw_t_from_ct (sal(i)%x_ad_, temp(i)%x_ad_, p%x_ad_)
+!       Sorry but no computation of derivatives because gsw_t_from_ct does not support it.
+!          instead, assume that any derivative d(tempis)/dx is as d(temp)/dx
+        tempis%xp_ad_(:) = temp(i)%xp_ad_(:)
+        tempis68  = (tempis - 0.0002_rx) / 0.99975_rx
      ELSE
-        PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
+        PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
         PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
@@ -953,6 +1064,33 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
 !       Hydrostatic pressure (prb is in bars)
         prb = p / 10.0d0
+
+!       Convert from Absolute to Practical salinity if needed
+        IF (trim(opS) == 'Sabs')  THEN
+           IF (PRESENT(lon)) THEN
+               ! longitude is passed in
+               sa1(1) = ssal%x_ad_
+               p1(1) = p%x_ad_
+               lon1(1) = DBLE(lon(i))
+               lat1(1) = DBLE(lat(i))
+           ELSE
+               lon1(1) = 1.e20_r8
+               lat1(1) = 1.e20_r8
+           ENDIF
+           IF (lon1(1) .NE. 1.e20_r8 .AND. lat1(1) .NE. 1.e20_r8) THEN
+              ! longitude and latitude are defined
+              CALL sa2sp_geo (sa1, 1, s1, p1, lon1, lat1)
+           ELSE
+              ! use default geographic location
+              CALL sa2sp_geo (sa1, 1, s1, p1)
+           ENDIF
+           s%x_ad_ = s1(1)
+!          Sorry but no computation of derivatives because sa2sp_geo does not support it.
+!            instead, assume that any derivative d(s)/dx is as d(sal)/dx
+           s%xp_ad_(:) = ssal%xp_ad_(:)
+        ELSE
+           s = ssal
+        ENDIF
 
 !       Salinity and simply related values
         s = ssal

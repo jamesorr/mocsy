@@ -24,6 +24,16 @@ else
 endif
 
 #=======================================================================
+#               define location of installed GSW-fortran package
+#=======================================================================
+GSW = ../GSW-Fortran
+
+# Note: we shall look for GSW compiled modules in subfolder "modules"
+GSW_MOD = $(GSW)/modules
+# we shall look for GSW compiled files ub subfolder "toolbox"
+GSW_TOOL = $(GSW)/toolbox
+
+#=======================================================================
 #=======================================================================
 
 # To use another Fortran compiler, replace "f95" in FC and F90 lines with your compiler command
@@ -41,7 +51,8 @@ FCFLAGS = -fPIC -cpp -DUSE_PRECISION=$(PRECISION)
 #DEBUGFLAGS = -g
 #LDFLAGS = -L/usr/local/lib -lnetcdf -lnetcdff
 LDFLAGS = -L./ -lmocsy
-INCLUDEFLAGS = -I/usr/local/include -Isrc
+INCLUDEFLAGS = -I/usr/local/include -I$(GSW_MOD) -Isrc
+NETCDF_LIBS := -lnetcdf -lnetcdff
 
 
 # List of executables to be built within the package
@@ -60,6 +71,7 @@ vpath %     examples
 #vpath %.h src
 
 SOURCES = singledouble.f90 \
+          eos.f90 \
           sw_adtg.f90 \
           sw_ptmp.f90 \
           sw_temp.f90 \
@@ -82,6 +94,7 @@ SOURCES = singledouble.f90 \
           gasx.f90 
 
 OBJS =  singledouble.o \
+        eos.o \
         sw_adtg.o \
         sw_ptmp.o \
         sw_temp.o \
@@ -108,11 +121,9 @@ EXEC = test_mocsy
 library = libmocsy.a
 #---------------------------------------------------------------------------
 
-# General rule for building prog from prog.o; $^ (GNU extension) is
-# used in order to list additional object files on which the
-# executable depends
-#%: %.o
-#	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
+# Build GSW archive
+libgsw.a: $(GSW_TOOL)/*.o $(GSW_MOD)/*.o  
+	ar cr libgsw.a $^
 
 #---------------------------------------------------------------------------
 # Build the mocsy library containing the object files (not used, illustration only)
@@ -120,54 +131,45 @@ $(library): DNAD.o $(OBJS)
 	ar cr $(library) DNAD.o $(OBJS)
 
 # Build the Fortran program executable that tests the mocsy library (test_mocsy)
-#<<<<<<< HEAD:Makefile
-#$(EXEC): $(EXEC).o $(OBJS) $(library) 
-#	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS)
-#
-## Build the shared object file for python
-#mocsy.so: $(OBJS)
-#	cp src/*.f90 .
-#	f2py -c $(SOURCES) -m mocsy --fcompiler=gnu95 --f90flags=-O3
-#	rm $(SOURCES)
-#=======
-$(EXEC): $(EXEC).o DNAD.o $(OBJS) test_mocsy.o $(library) 
-	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS)
+$(EXEC): $(EXEC).o DNAD.o $(OBJS) test_mocsy.o $(library) libgsw.a
+	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
 # Build the shared object file for python
 mocsy.so: DNAD.o $(SOURCES)
 	cp src/*.f90 .
 	# Select the kind map
 	cp -f -s src/$(KIND_MAP) .f2py_f2cmap
-	f2py -c $(SOURCES) skip: varsolver_dnad : skip: constants_dnad :        \
-	skip: sw_ptmp_dnad : skip: sw_temp_dnad : skip: sw_adtg_dnad :          \
-	skip: rho_dnad : skip: equation_at_dnad : skip: solve_at_general_dnad : \
-	DNAD.o -m mocsy --fcompiler=gnu95 --f90flags="$(FCFLAGS)"
+	f2py -c $(SOURCES) skip: vars_sprac : skip: vars_pertK : skip: varsolver_dnad :         \
+	skip: constants_dnad : skip: sw_ptmp_dnad : skip: sw_temp_dnad : skip: sw_adtg_dnad :   \
+	skip: rho_dnad : skip: equation_at_dnad : skip: solve_at_general_dnad :                 \
+	DNAD.o -m mocsy --fcompiler=gnu95 --f90flags="$(FCFLAGS) $(INCLUDEFLAGS)"
 	rm $(SOURCES) DNAD.f90
 #---------------------------------------------------------------------------
 # Other test programs
-#test_errors:  $(LIBSRC_OBJECTS) test_errors.o $(library) 
-#	${FC} ${FCFLAGS} -o $@ $@.f90 $(LDFLAGS)
 
-test_errors: test_errors.o $(OBJS) $(library) 
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_vars: test_vars.o $(OBJS) $(library) libgsw.a
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
-test_derivauto: test_derivauto.o $(OBJS) $(library) 
-	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_errors: test_errors.o $(OBJS) $(library) libgsw.a
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
-test_derivnum: test_derivnum.o $(OBJS) $(library) 
-	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_derivauto: test_derivauto.o $(OBJS) $(library) libgsw.a
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
-test_buffesm: test_buffesm.o $(OBJS) $(library) 
-	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_derivnum: test_derivnum.o $(OBJS) $(library) libgsw.a
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
-test_phizero: test_phizero.o $(OBJS) $(library) 
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_buffesm: test_buffesm.o $(OBJS) $(library) libgsw.a
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
-test_kprime: test_kprime.o $(OBJS) $(library) 
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_phizero: test_phizero.o $(OBJS) $(library) libgsw.a
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
-test_kzero: test_kzero.o $(OBJS) $(library) 
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
+test_kprime: test_kprime.o $(OBJS) $(library) libgsw.a
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
+
+test_kzero: test_kzero.o $(OBJS) $(library) libgsw.a
+	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw $(NETCDF_LIBS)
 
 # General rule for building prog from prog.o; $^ (GNU extension) is
 # used in order to list additional object files on which the

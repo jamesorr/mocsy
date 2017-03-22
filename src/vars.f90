@@ -10,7 +10,7 @@ CONTAINS
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS                          )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon               )
 
   !   Purpose:
   !     Computes other standard carbonate system variables (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)
@@ -26,10 +26,12 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !     depth   = depth [m]     (with optP='m', i.e., for a z-coordinate model vertical grid is depth, not pressure)
   !             = pressure [db] (with optP='db')
   !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
-  !             = dummy array (unused when optP='db')
+  !             = may also be used to convert absolute to practical salinity, when optS='Sabs' 
+  !             = dummy array (unused when optP='db' and optS='Sprc')
   !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not in situ temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
-  !     sal     = salinity in [psu]
+  !             = conservative temperature [degrees C] (with optT='Tcsv')
+  !     sal     = practical [psu] or absolute [g/kg] salinity
   !     alk     = total alkalinity in [eq/m^3] with optCON = 'mol/m3'
   !             =               [eq/kg]  with optCON = 'mol/kg'
   !     dic     = dissolved inorganic carbon [mol/m^3] with optCON = 'mol/m3'
@@ -46,11 +48,12 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !       -> 'mol/kg' for DIC, ALK, sil, & phos given on mokal scale, i.e., in mol/kg  (std DATA units)
   !       -> 'mol/m3' for DIC, ALK, sil, & phos given in mol/m^3 (std MODEL units)
   !     -----------
-  !     optT: choose in situ vs. potential temperature as input
+  !     optT: choose in-situ, potential or conservative temperature as input
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
   !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
-  !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
+  !       -> 'Tcsv' means input is Conservative Temperature (in situ Temp "tempis" is computed)
+  !       -> 'Tinsitu' means input is already in-situ Temperature ("tempis" not computed)
   !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
   !     ---------
@@ -84,6 +87,32 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !                      considers potential T & only atm pressure (hydrostatic press = 0)
   !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
   !                      considers in situ T & total pressure (atm + hydrostatic)
+  !     ----------
+  !     optS: choose practical [psu] or absolute [g/kg] salinity as input
+  !     ----------
+  !       -> 'Sprc' means input is practical salinity according to EOS-80 convention
+  !       -> 'Sabs' means input is absolute salinity according to TEOS-10 convention (practical sal. will be computed)
+  !     ---------
+  !     lon:  longitude in degrees East
+  !     ----------
+  !        Optional, it may be used along with latitude when optS is "Sabs".
+  !        Then, they are parameters for conversion from Absolute to Practical Salinity.
+  !
+  !        When seawater is not of standard composition, Practical Salinity alone is not sufficient 
+  !        to compute Absolute Salinity and vice-versa. One needs to know the chemical composition, 
+  !        mainly silicate and nitrate concentration. When those concentrations are unknown and 'lon' and 'lat' 
+  !        are given, absolute salinity conversion is based on WOA silicate concentration at given location. 
+  !
+  !        Alternative when optS is 'Sabs' :
+  !        -------------------------------
+  !        When silicate and phosphate concentrations are known, nitrate concentration is inferred from phosphate
+  !        (using Redfield ratio), then practical salinity is computed from absolute salinity, 
+  !        total alcalinity (alk), DIC (dic), silicate (sil) and phosphate (phos).
+  !        In that case, do not pass optional parameter 'lon'.
+  !
+  !        When neither chemical composition nor location are known, an arbitrary geographic point is chosen:
+  !        mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
+  !        In that case, do pass parameter 'lon' and set each of its elements to 1.e20.
   !     ---------
 
   !     OUTPUT variables:
@@ -106,11 +135,12 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 #else
 #   define SGLE(x)    REAL(x)
 #endif
-
   USE msingledouble
   USE mconstants
   USE mp80
   USE mrho
+  USE meos
+  USE gsw_mod_toolbox, only: gsw_t_from_ct
   USE msw_temp
   USE mvarsolver
 
@@ -123,7 +153,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: temp
-  !> salinity <b>[psu]</b>
+  !> salinity <b>[psu] or [g/kg]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
   !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: alk
@@ -143,7 +173,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
   CHARACTER(6), INTENT(in) :: optCON
-  !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
+  !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature
+  !>  \b 'Tcsv" for conservative temperature (in two last cases, in-situ Temp is computed, needed for models)
   CHARACTER(7), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
   CHARACTER(2), INTENT(in) :: optP
@@ -164,8 +195,12 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
-! CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
   CHARACTER(*), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -194,14 +229,136 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: tempis
 
 ! Local variables
+  ! practical salinity (psu)
+  REAL(kind=rx), DIMENSION(N) :: salprac
+
+  
+  ! Call the subroutine that actually computes
+  call vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
+                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                         &
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac          )
+                
+END SUBROUTINE vars
+
+
+!>    This is the subroutine that does acutall the computations
+!!    This subroutine is only called internaly (i.e. by other Mocsy subroutines)
+!!    Its output parameter "Practical Salinity", when Absolute Salinity is passed in.
+!!    is used by those internal calling routines.
+!!
+SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
+                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac      )
+
+  USE msingledouble
+  USE mconstants
+  USE mp80
+  USE mrho
+  USE meos
+  USE gsw_mod_toolbox, only: gsw_t_from_ct
+  USE msw_temp
+  USE mvarsolver
+
+  IMPLICIT NONE
+
+! Input variables
+  !>     number of records
+!f2py intent(hide) n
+  INTEGER, INTENT(in) :: N
+  !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
+  !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: temp
+  !> salinity <b>[psu] or [g/kg]</b>
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
+  !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: alk
+  !> dissolved inorganic carbon in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: dic
+  !> SiO2 concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: sil
+  !> phosphate concentration in <b>[mol/m^3]</b> (when optCON = 'mol/m3') OR in <b>[mol/kg]</b> (when optCON = 'mol/kg')
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: phos
+  !> atmospheric pressure <b>[atm]</b>
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
+  !> depth in \b meters (when optP='m') or \b decibars (when optP='db')
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: depth
+  !> latitude <b>[degrees north]</b>
+  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: lat
+
+  !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
+  !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
+  CHARACTER(6), INTENT(in) :: optCON
+  !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature
+  !>  \b 'Tcsv" for conservative temperature (in two last cases, in-situ Temp is computed, needed for models)
+  CHARACTER(7), INTENT(in) :: optT
+  !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
+  CHARACTER(2), INTENT(in) :: optP
+  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
+  !! The 'l10' formulation is based on 139 measurements (instead of 20), 
+  !! uses a more accurate method, and
+  !! generally increases total boron in seawater by 4% 
+!f2py character*3 optional, intent(in) :: optB='l10'
+  CHARACTER(3), OPTIONAL, INTENT(in) :: optB
+  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
+!f2py character*2 optional, intent(in) :: optKf='pf'
+  CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
+  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
+!f2py character*3 optional, intent(in) :: optK1K2='l'
+  CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
+  !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
+  !! 'Ppot'    - for 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
+  !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
+  !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
+!f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+
+! Output variables:
+  !> pH on the <b>total scale</b>
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: ph
+  !> CO2 partial pressure <b>[uatm]</b>
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: pco2
+  !> CO2 fugacity <b>[uatm]</b>
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: fco2
+  !> aqueous CO2* concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg</b>] depending on choice for optCON
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co2
+  !> bicarbonate ion (HCO3-) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: hco3
+  !> carbonate ion (CO3--) concentration, either in <b>[mol/m^3]</b> or <b>[mol/kg]</b> depending on choice for optCON
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: co3
+  !> Omega for aragonite, i.e., the aragonite saturation state
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: OmegaA
+  !> Omega for calcite, i.e., the calcite saturation state
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: OmegaC
+  !> Revelle factor, i.e., dpCO2/pCO2 / dDIC/DIC
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: BetaD
+  !> in-situ density of seawater; rhoSW = f(s, t, p) in <b>[kg/m3]</b>
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: rhoSW
+  !> pressure <b>[decibars]</b>; p = f(depth, latitude) if computed from depth [m] (when optP='m') OR p = depth [db] (when optP='db')
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: p
+  !> in-situ temperature \b <b>[degrees C]</b>
+  REAL(kind=rx), INTENT(out), DIMENSION(N) :: tempis
+  !> practical salinity \b <b>[psu]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(out), DIMENSION(N) :: salprac
+
+! Local variables
   REAL(kind=rx) :: ssal, salk, sdic, ssil, sphos
   REAL(kind=r8) :: tempot, tempis68, tempot68, tempis90
   REAL(kind=r8) :: drho
 
+  ! local 1-long array version of scalar variables
   REAL(kind=r8), DIMENSION(1) :: aK0, aK1, aK2, aKb, aKw, aKs, aKf, aKspc
   REAL(kind=r8), DIMENSION(1) :: aKspa, aK1p, aK2p, aK3p, aKsi
   REAL(kind=r8), DIMENSION(1) :: aSt, aFt, aBt
 
+  REAL(kind=r8), DIMENSION(1) :: sabs1, spra1, s1, p1, lon1, lat1
+  REAL(kind=r8), DIMENSION(1) :: tc1, ta1, sit1, nt1
+  REAL(kind=rx), DIMENSION(1) :: sal1
+  
   REAL(kind=r8) :: Patmd
   REAL(kind=r8) :: Ptot
   REAL(kind=r8) :: Phydro_atm
@@ -225,6 +382,8 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
+
 
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -261,6 +420,11 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
     opGAS = optGAS
   ELSE
     opGAS = 'Pinsitu'
+  ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
   ENDIF
 
   icount = 0
@@ -310,8 +474,22 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         tempis68  = (tempis90 - 0.0002_r8) / 0.99975_r8
 !       dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
 !       dtempot   = 0.99975*dtempot68 + 0.0002
+     ELSEIF (trim(optT) == 'Tcsv' .OR. trim(optT) == 'tcsv') THEN
+!       Convert given conservative temperature to in-situ temperature
+        ! First convert salinity to absolute sal., if necessary
+        IF (trim(opS) == 'Sprc')  THEN
+            ! conversion will use default geographic location
+            spra1(1) = DBLE(sal(i))
+            p1(1) = DBLE(p(i))
+            CALL sp2sa_geo (spra1, 1, sabs1, p1)
+        ELSE
+            sabs1(1) = DBLE(sal(i))
+        END IF
+        ! Then convert temperature
+        tempis90 = gsw_t_from_ct (sabs1(1), DBLE(temp(i)), DBLE(p(i)))
+        tempis68  = (tempis90 - 0.0002_r8) / 0.99975_r8
      ELSE
-        PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
+        PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
         PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
@@ -379,17 +557,6 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
            STOP
         ENDIF
 
-!       Salinity (equivalent array in double precision)
-        s = DBLE(ssal)
-
-!       Get all equilibrium constants and total concentrations of SO4, F, B
-        CALL constants (aK0, aK1, aK2, aKb, aKw, aKs, aKf,            &
-                    aKspc, aKspa, aK1p, aK2p, aK3p, aKsi,             &
-                    aSt, aFt, aBt,                                    &
-                    temp(i), sal(i), Patm(i),                         &
-                    depth(i), lat(i), 1,                              &
-                    optT, optP, opB, opK1K2, opKf, opGAS              )
-
 !       Compute in-situ density [kg/m^3]
         rhoSW(i) = rho(ssal, SGLE(tempis68), SGLE(prb))
 
@@ -412,6 +579,71 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
         tc  = DBLE(sdic)  / drho
         pt  = DBLE(sphos) / drho
         sit = DBLE(ssil)  / drho
+
+!       Salinity (equivalent array in double precision)
+        s = DBLE(ssal)
+
+!       Convert from Absolute to Practical salinity if needed
+        IF (trim(opS) == 'Sabs')  THEN
+           IF (PRESENT(lon)) THEN
+               ! longitude is passed in
+               sabs1(1) = s   ! absolute sal.
+               p1(1) = DBLE(p(i))
+               IF (lon(i) .NE. 1e20_rx .AND. lat(i) .NE. 1.e20_rx) THEN
+                  ! longitude and latitude are defined
+                  lon1(1) = DBLE(lon(i))
+                  lat1(1) = DBLE(lat(i))
+                  CALL sa2sp_geo (sabs1, 1, s1, p1, lon1, lat1)
+               ELSE
+                  ! will use default geographic location
+                  CALL sa2sp_geo (sabs1, 1, s1, p1)
+               ENDIF
+           ELSE
+               sabs1(1) = s
+               tc1(1) = tc
+               ta1(1) = ta
+               sit1(1) = sit
+               ! Nitrate total : from Phosphate using Redfield ratio (16)
+               nt1(1) = 16.0 * pt
+               CALL sa2sp_chem(sabs1, ta1, tc1, nt1, sit1, 1, s1)
+           ENDIF
+           s = s1(1)
+           IF (PRESENT(salprac)) salprac(i) = SGLE(s)
+           
+           ! Note: When optCON = 'mol/m3' and opS = 'Sabs' and longitude is not given
+           !       
+           !       computed water density (drho) is wrong because it has been calculated with a wrong salinity
+           !       (absolute instead of practical saliniry)
+           !       and, in the same manner, ta, tc, pt and sit are wrong 
+           !       practical saliniry 's' is wrong too since it was computed from ta, tc, pt and sit
+           !       but the relative error was small on ta, ta, pt and sit
+           !       It is even smaller on 's'
+           !       Ideally, we shoul iterate: compute drho then 's' then drho again and so on... until it converges.
+           !       We choose to recompute rho, ta, ta, pt, sit only once.
+           
+           ! Value of salinity has changed
+           ! re-Compute in-situ density [kg/m^3]
+           rhoSW(i) = rho(s, SGLE(tempis68), SGLE(prb))
+           IF (trim(optCON) == 'mol/m3') THEN
+              ! re-Do conversion:
+              drho = DBLE(rhoSW(i))
+
+              ! Re-Initialise ta, tc, pt and sit
+              ta  = DBLE(salk)  / drho
+              tc  = DBLE(sdic)  / drho
+              pt  = DBLE(sphos) / drho
+              sit = DBLE(ssil)  / drho
+           ENDIF
+        ENDIF
+          
+!       Get all equilibrium constants and total concentrations of SO4, F, B
+        sal1(1) = SGLE(s)
+        CALL constants (aK0, aK1, aK2, aKb, aKw, aKs, aKf,            &
+                    aKspc, aKspa, aK1p, aK2p, aK3p, aKsi,             &
+                    aSt, aFt, aBt,                                    &
+                    temp(i), sal1, Patm(i),                           &
+                    depth(i), lat(i), 1,                              &
+                    optT, optP, opB, opK1K2, opKf, opGAS              )
 
 !       Solve for pH and all other variables
 !       ------------------------------------
@@ -472,15 +704,15 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   END DO
 
   RETURN
-END SUBROUTINE vars
+END SUBROUTINE vars_sprac
 
 
 !>    Same routine as vars() above
 !!    except that it perturbs slightly one dissociation constant 
-SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
-                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,      &
-                var_index, abs_delta,                                     &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS         )
+SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
+                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,        &
+                var_index, abs_delta,                                       &
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon )
 
   !   Purpose:
   !     
@@ -516,6 +748,8 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
   USE mconstants
   USE mp80
   USE mrho
+  USE meos
+  USE gsw_mod_toolbox, only: gsw_t_from_ct
   USE msw_temp
   USE mvarsolver
 
@@ -574,6 +808,10 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -606,10 +844,15 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
 ! REAL(kind=r8) :: dtempot, dtempot68
   REAL(kind=r8) :: drho
 
+  ! local 1-long array version of scalar variables
   REAL(kind=r8), DIMENSION(1) :: aK0, aK1, aK2, aKb, aKw, aKs, aKf, aKspc
   REAL(kind=r8), DIMENSION(1) :: aKspa, aK1p, aK2p, aK3p, aKsi
   REAL(kind=r8), DIMENSION(1) :: aSt, aFt, aBt
 
+  REAL(kind=r8), DIMENSION(1) :: sabs1, spra1, s1, p1, lon1, lat1
+  REAL(kind=r8), DIMENSION(1) :: tc1, ta1, sit1, nt1
+  REAL(kind=rx), DIMENSION(1) :: sal1 
+  
   REAL(kind=r8) :: Patmd
   REAL(kind=r8) :: Ptot
   REAL(kind=r8) :: Phydro_atm
@@ -628,6 +871,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
 
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -664,6 +908,11 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
     opGAS = optGAS
   ELSE
     opGAS = 'Pinsitu'
+  ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
   ENDIF
 
   icount = 0
@@ -710,11 +959,25 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
      ELSEIF (trim(optT) == 'Tinsitu' .OR. trim(optT) == 'tinsitu') THEN
 !       When optT = 'Tinsitu', tempis is input & output (no tempot needed)
         tempis90 = DBLE(temp(i))
-        tempis68  = (tempis90 - 0.0002) / 0.99975
+        tempis68  = (tempis90 - 0.0002_r8) / 0.99975_r8
 !       dtempot68 = sw_ptmp(DBLE(sal(i)), DBLE(tempis68), DBLE(p), 0.0d0)
 !       dtempot   = 0.99975*dtempot68 + 0.0002
+     ELSEIF (trim(optT) == 'Tcsv' .OR. trim(optT) == 'tcsv') THEN
+!       Convert given conservative temperature to in-situ temperature
+        ! First convert salinity to absolute sal., if necessary
+        IF (trim(opS) == 'Sprc')  THEN
+            ! conversion will use default geographic location
+            spra1(1) = DBLE(sal(i))
+            p1(1) = DBLE(p)
+            CALL sp2sa_geo (spra1, 1, sabs1, p1)
+        ELSE
+            sabs1(1) = DBLE(sal(i))
+        END IF
+        ! Then convert temperature
+        tempis90 = gsw_t_from_ct (sabs1(1), DBLE(temp(i)), DBLE(p))
+        tempis68  = (tempis90 - 0.0002_r8) / 0.99975_r8
      ELSE
-        PRINT *,"optT must be either 'Tpot' or 'Tinsitu'"
+        PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
         PRINT *,"you specified optT =", trim(optT) 
         STOP
      ENDIF
@@ -781,14 +1044,89 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
            STOP
         ENDIF
 
+!       Either convert units of DIC and ALK (MODEL case) or not (DATA case)
+        IF     (trim(optCON) == 'mol/kg') THEN
+!          No conversion:  drho = 1.
+!          print *,'DIC and ALK already given in mol/kg (std DATA units)'
+           drho = 1.0
+        ELSEIF (trim(optCON) == 'mol/m3') THEN
+!          Compute in-situ density [kg/m^3]
+           rhoSW = rho(ssal, SGLE(tempis68), SGLE(prb))
+!          Do conversion:
+!          print *,"DIC and ALK given in mol/m^3 (std MODEL units)"
+           drho = DBLE(rhoSW)
+        ELSE
+           PRINT *,"optCON must be either 'mol/kg' or 'mol/m3'"
+           STOP
+        ENDIF
+
+!       Initialise ta, tc, pt and sit
+        ta  = DBLE(salk)  / drho
+        tc  = DBLE(sdic)  / drho
+        pt  = DBLE(sphos) / drho
+        sit = DBLE(ssil)  / drho
+
 !       Salinity (equivalent array in double precision)
         s = DBLE(ssal)
 
+!       Convert from Absolute to Practical salinity if needed
+        IF (trim(opS) == 'Sabs')  THEN
+           IF (PRESENT(lon)) THEN
+               ! longitude is passed in
+               sabs1(1) = s   ! absolute sal.
+               p1(1) = DBLE(p)
+               IF (lon(i) .NE. 1e20_rx .AND. lat(i) .NE. 1.e20_rx) THEN
+                  ! longitude and latitude are defined
+                  lon1(1) = DBLE(lon(i))
+                  lat1(1) = DBLE(lat(i))
+                  CALL sa2sp_geo (sabs1, 1, s1, p1, lon1, lat1)
+               ELSE
+                  ! will use default geographic location
+                  CALL sa2sp_geo (sabs1, 1, s1, p1)
+               ENDIF
+           ELSE
+               sabs1(1) = s
+               tc1(1) = tc
+               ta1(1) = ta
+               sit1(1) = sit
+               ! Nitrate total : from Phosphate using Redfield ratio (16)
+               nt1(1) = 16.0 * pt
+               CALL sa2sp_chem(sabs1, ta1, tc1, nt1, sit1, 1, s1)
+           ENDIF
+           s = s1(1)
+
+           ! Note: When optCON = 'mol/m3' and opS = 'Sabs' and longitude is not given
+           !       
+           !       computed water density (drho) is wrong because it has been calculated with a wrong salinity
+           !       (absolute instead of practical saliniry)
+           !       and, in the same manner, ta, tc, pt and sit are wrong 
+           !       practical saliniry 's' is wrong too since it was computed from ta, tc, pt and sit
+           !       but the relative error was small on ta, ta, pt and sit
+           !       It is even smaller on 's'
+           !       Ideally, we shoul iterate: compute drho then 's' then drho again and so on... until it converges.
+           !       We choose to recompute rho, ta, ta, pt, sit only once.
+           
+           ! Value of salinity has changed
+           ! re-Compute in-situ density [kg/m^3]
+           rhoSW = rho(s, SGLE(tempis68), SGLE(prb))
+           IF (trim(optCON) == 'mol/m3') THEN
+              ! re-Do conversion:
+              drho = DBLE(rhoSW)
+
+              ! Re-Initialise ta, tc, pt and sit
+              ta  = DBLE(salk)  / drho
+              tc  = DBLE(sdic)  / drho
+              pt  = DBLE(sphos) / drho
+              sit = DBLE(ssil)  / drho
+           ENDIF
+        ENDIF
+          
 !       Get all equilibrium constants and total concentrations of SO4, F, B
+        sal1(1) = SGLE(s)
         CALL constants (aK0, aK1, aK2, aKb, aKw, aKs, aKf,            &
                     aKspc, aKspa, aK1p, aK2p, aK3p, aKsi,             &
                     aSt, aFt, aBt,                                    &
-                    temp(i), sal(i), Patm(i),                         &
+                    temp(i), sal1, Patm(i),                           &
                     depth(i), lat(i), 1,                              &
                     optT, optP, opB, opK1K2, opKf, opGAS              )
 
@@ -811,28 +1149,6 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,     &
             CASE (8)
                 aBt(1) = aBt(1) + abs_delta
         END SELECT
-
-!       Either convert units of DIC and ALK (MODEL case) or not (DATA case)
-        IF     (trim(optCON) == 'mol/kg') THEN
-!          No conversion:  drho = 1.
-!          print *,'DIC and ALK already given in mol/kg (std DATA units)'
-           drho = 1.0
-        ELSEIF (trim(optCON) == 'mol/m3') THEN
-!          Compute in-situ density [kg/m^3]
-           rhoSW = rho(ssal, SGLE(tempis68), SGLE(prb))
-!          Do conversion:
-!          print *,"DIC and ALK given in mol/m^3 (std MODEL units)"
-           drho = DBLE(rhoSW)
-        ELSE
-           PRINT *,"optCON must be either 'mol/kg' or 'mol/m3'"
-           STOP
-        ENDIF
-
-!       Initialise ta, tc, pt and sit
-        ta  = DBLE(salk)  / drho
-        tc  = DBLE(sdic)  / drho
-        pt  = DBLE(sphos) / drho
-        sit = DBLE(ssil)  / drho
 
 !       Solve for pH and all other variables
 !       ------------------------------------
