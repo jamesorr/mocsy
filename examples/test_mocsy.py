@@ -37,10 +37,11 @@ ph_deriv     = ph_deriv.reshape ((6,6), order='F')
 pco2_deriv   = pco2_deriv.reshape ((6,6), order='F')
 OmegaA_deriv = OmegaA_deriv.reshape ((6,6), order='F')
 
-# Run mocsy
-mocsy.mvars.vars (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis, temp, sal, alk, dic, sil, phos, Patm, depth, lat, 6,
-    optcon='mol/kg', optt='Tinsitu', optp='db', optb='l10', optk1k2=optK1K2, optkf='dg',
-    ph_deriv=ph_deriv, pco2_deriv=pco2_deriv, omegaa_deriv=OmegaA_deriv )
+# Run mocsy.vars()
+# Notice that option names are all lowercase
+ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis = \
+    mocsy.mvars (temp, sal, alk, dic, sil, phos, Patm, depth, lat,
+                 optcon='mol/kg', optt='Tinsitu', optp='db', optb='l10', optk1k2=optK1K2, optkf='dg')
 
 # print mocsy results
 # -------------------
@@ -48,6 +49,12 @@ mocsy.mvars.vars (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, 
 print "pH     pCO2   fCO2     CO2*       HCO3-       CO32-      OmegaA OmegaC  R    Density Press  Temperature"
 for i in range (0, 6):
     print ph[i], pco2[i], fco2[i], co2[i], hco3[i], co3[i], OmegaA[i], OmegaC[i], BetaD[i], rhoSW[i], p[i], tempis[i]
+
+
+# Compute automatic derivatives (using automatic differentiation)
+ph_deriv, pco2_deriv, fco2_deriv, co2_deriv, hco3_deriv, co3_deriv, OmegaA_deriv, OmegaC_deriv = \
+    mocsy.mderivauto(temp, sal, alk, dic, sil, phos, Patm, depth, lat,                                     # INPUT
+                    optcon='mol/kg', optt='Tinsitu', optp='db', optb='l10', optk1k2=optK1K2, optkf='dg')  # INPUT OPTIONS
 
 # Compute buffer factors from Egleston
 # pco2_deriv[2,:] are derivatives of pCO2 w/ respect to DIC
