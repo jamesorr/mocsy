@@ -4,6 +4,12 @@
 MODULE meos
 CONTAINS
 
+#if USE_PRECISION == 2
+#   define SGLE(x)    (x)
+#else
+#   define SGLE(x)    REAL(x)
+#endif
+
 SUBROUTINE sa2sp_chem(SA, TA, DIC, NO3, SIOH4, N, SP)
 ! sa2sp_chem:             From Absolute to Practical Salinity
 ! 
@@ -184,11 +190,11 @@ IMPLICIT NONE
   IF (PRESENT(lat) .AND. PRESENT(long)) THEN
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SP(i) = gsw_sp_from_sa(SA(i),P(i),long(i),lat(i))
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)),DBLE(P(i)),DBLE(long(i)),DBLE(lat(i))))
         ENDDO
      ELSE
         DO i = 1, N
-           SP(i) = gsw_sp_from_sa(SA(i), 0.0d0, long(i), lat(i))
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), 0.0d0, DBLE(long(i)),DBLE(lat(i))))
         ENDDO
      ENDIF
   ELSE
@@ -196,11 +202,11 @@ IMPLICIT NONE
      def_long = -25
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SP(i) = gsw_sp_from_sa(SA(i), P(i), def_long, def_lat)
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), DBLE(P(i)), def_long, def_lat))
         ENDDO
      ELSE
         DO i = 1, N
-           SP(i) = gsw_sp_from_sa(SA(i), 0.0d0, def_long, def_lat)
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), 0.0d0, def_long, def_lat))
         ENDDO
      ENDIF
   ENDIF
@@ -380,11 +386,11 @@ IMPLICIT NONE
   IF (PRESENT(lat) .AND. PRESENT(long)) THEN
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SA(i) = gsw_sa_from_sp(SP(i), P(i), long(i), lat(i))
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), DBLE(P(i)), DBLE(long(i)), DBLE(lat(i))))
         ENDDO
      ELSE
         DO i = 1, N
-           SA(i) = gsw_sa_from_sp(SP(i), 0.0d0, long(i), lat(i))
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), 0.0d0, DBLE(long(i)), DBLE(lat(i))))
         ENDDO
      ENDIF
   ELSE
@@ -392,11 +398,11 @@ IMPLICIT NONE
      def_long = -25
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SA(i) = gsw_sa_from_sp(SP(i), P(i), def_long, def_lat)
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), DBLE(P(i)), def_long, def_lat))
         ENDDO
      ELSE
         DO i = 1, N
-           SA(i) = gsw_sa_from_sp(SP(i), 0.0d0, def_long, def_lat)
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), 0.0d0, def_long, def_lat))
         ENDDO
      ENDIF
   ENDIF 
@@ -493,7 +499,7 @@ IMPLICIT NONE
 
   ! convert temperature
   DO i = 1, N
-     T(i) = gsw_t_from_ct (SA(i), CvT(i), P(i))
+     T(i) = SGLE(gsw_t_from_ct (DBLE(SA(i)), DBLE(CvT(i)), DBLE(P(i))))
   ENDDO
     
   ! convert salinity
@@ -579,7 +585,7 @@ IMPLICIT NONE
   
   ! convert temperature
   DO i = 1, N
-     T(i) = gsw_t_from_ct (SA(i), CvT(i), P(i))
+     T(i) = SGLE(gsw_t_from_ct (DBLE(SA(i)), DBLE(CvT(i)), DBLE(P(i))))
   ENDDO
   ! convert salinity
   IF (PRESENT(lat) .AND. PRESENT(long)) THEN
@@ -674,7 +680,7 @@ IMPLICIT NONE
   ENDIF
   ! convert temperature
   DO i = 1, N
-     CvT(i) = gsw_ct_from_t (SA(i), T(i), P(i))
+     CvT(i) = SGLE(gsw_ct_from_t (DBLE(SA(i)), DBLE(T(i)), DBLE(P(i))))
   ENDDO
 END SUBROUTINE
 
@@ -775,7 +781,7 @@ IMPLICIT NONE
   CALL sp2sa_chem (SP, TA, DIC, NO3, SIOH4, N, SA)
   ! convert temperature
   DO i = 1, N
-     CvT(i) = gsw_ct_from_t (SA(i), T(i), P(i))
+     CvT(i) = SGLE(gsw_ct_from_t (DBLE(SA(i)), DBLE(T(i)), DBLE(P(i))))
   ENDDO
 END SUBROUTINE
 

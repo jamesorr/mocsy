@@ -354,8 +354,8 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
   REAL(kind=r8), DIMENSION(1) :: aKspa, aK1p, aK2p, aK3p, aKsi
   REAL(kind=r8), DIMENSION(1) :: aSt, aFt, aBt
 
-  REAL(kind=r8), DIMENSION(1) :: sabs1, spra1, s1, p1, lon1, lat1
-  REAL(kind=r8), DIMENSION(1) :: tc1, ta1, sit1, nt1
+  REAL(kind=rx), DIMENSION(1) :: sabs1, spra1, p1, lon1, lat1
+  REAL(kind=rx), DIMENSION(1) :: tc1, ta1, sit1, nt1
   REAL(kind=rx), DIMENSION(1) :: sal1
   
   REAL(kind=r8) :: Patmd
@@ -478,14 +478,14 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
         ! First convert salinity to absolute sal., if necessary
         IF (trim(opS) == 'Sprc')  THEN
             ! conversion will use default geographic location
-            spra1(1) = DBLE(sal(i))
-            p1(1) = DBLE(p(i))
+            spra1(1) = sal(i)
+            p1(1) = p(i)
             CALL sp2sa_geo (spra1, 1, sabs1, p1)
         ELSE
-            sabs1(1) = DBLE(sal(i))
+            sabs1(1) = sal(i)
         END IF
         ! Then convert temperature
-        tempis90 = gsw_t_from_ct (sabs1(1), DBLE(temp(i)), DBLE(p(i)))
+        tempis90 = gsw_t_from_ct (DBLE(sabs1(1)), DBLE(temp(i)), DBLE(p(i)))
         tempis68  = (tempis90 - 0.0002_r8) / 0.99975_r8
      ELSE
         PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
@@ -562,11 +562,11 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
            ! If in-situ or potential temperature is given
            IF (trim(optT) /= 'Scsv') THEN
               ! First compute conservative temperature
-              tempcsv = gsw_ct_from_t (ssal, tempis90, p(i))
+              tempcsv = gsw_ct_from_t (DBLE(ssal), tempis90, DBLE(p(i)))
            ELSE
-              tempcsv = temp(i)
+              tempcsv = DBLE(temp(i))
            ENDIF
-           rhoSW(i) = gsw_rho(ssal, tempcsv, prb)
+           rhoSW(i) = gsw_rho(DBLE(ssal), tempcsv, prb)
         ELSE
            rhoSW(i) = rho(ssal, SGLE(tempis68), SGLE(prb))
         ENDIF
@@ -596,29 +596,28 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
 
 !       Convert from Absolute to Practical salinity if needed
         IF (trim(opS) == 'Sabs')  THEN
+           sabs1(1) = ssal   ! absolute sal.
+           ! If longitude is passed in
            IF (PRESENT(lon)) THEN
-               ! longitude is passed in
-               sabs1(1) = s   ! absolute sal.
-               p1(1) = DBLE(p(i))
+               p1(1) = p(i)
                IF (lon(i) .NE. 1e20_rx .AND. lat(i) .NE. 1.e20_rx) THEN
                   ! longitude and latitude are defined
-                  lon1(1) = DBLE(lon(i))
-                  lat1(1) = DBLE(lat(i))
-                  CALL sa2sp_geo (sabs1, 1, s1, p1, lon1, lat1)
+                  lon1(1) = lon(i)
+                  lat1(1) = lat(i)
+                  CALL sa2sp_geo (sabs1, 1, spra1, p1, lon1, lat1)
                ELSE
                   ! will use default geographic location
-                  CALL sa2sp_geo (sabs1, 1, s1, p1)
+                  CALL sa2sp_geo (sabs1, 1, spra1, p1)
                ENDIF
            ELSE
-               sabs1(1) = s
                tc1(1) = tc
                ta1(1) = ta
                sit1(1) = sit
                ! Nitrate total : from Phosphate using Redfield ratio (16)
                nt1(1) = 16.0 * pt
-               CALL sa2sp_chem(sabs1, ta1, tc1, nt1, sit1, 1, s1)
+               CALL sa2sp_chem(sabs1, ta1, tc1, nt1, sit1, 1, spra1)
            ENDIF
-           s = s1(1)
+           s = DBLE(spra1(1))
            IF (PRESENT(salprac)) salprac(i) = SGLE(s)
         ENDIF
           
@@ -735,7 +734,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
   USE mp80
   USE mrho
   USE meos
-  USE gsw_mod_toolbox, only: gsw_t_from_ct
+  USE gsw_mod_toolbox, only: gsw_t_from_ct, gsw_ct_from_t, gsw_rho
   USE msw_temp
   USE mvarsolver
 
@@ -826,8 +825,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
   REAL(kind=rx) :: ssal, salk, sdic, ssil, sphos
 
   !> in-situ temperature \b <b>[degrees C]</b>
-  REAL(kind=r8) :: tempot, tempis68, tempot68, tempis90
-! REAL(kind=r8) :: dtempot, dtempot68
+  REAL(kind=r8) :: tempot, tempis68, tempot68, tempis90, tempcsv
   REAL(kind=r8) :: drho
 
   ! local 1-long array version of scalar variables
@@ -835,8 +833,8 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
   REAL(kind=r8), DIMENSION(1) :: aKspa, aK1p, aK2p, aK3p, aKsi
   REAL(kind=r8), DIMENSION(1) :: aSt, aFt, aBt
 
-  REAL(kind=r8), DIMENSION(1) :: sabs1, spra1, s1, p1, lon1, lat1
-  REAL(kind=r8), DIMENSION(1) :: tc1, ta1, sit1, nt1
+  REAL(kind=rx), DIMENSION(1) :: sabs1, spra1, p1, lon1, lat1
+  REAL(kind=rx), DIMENSION(1) :: tc1, ta1, sit1, nt1
   REAL(kind=rx), DIMENSION(1) :: sal1 
   
   REAL(kind=r8) :: Patmd
@@ -953,14 +951,14 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
         ! First convert salinity to absolute sal., if necessary
         IF (trim(opS) == 'Sprc')  THEN
             ! conversion will use default geographic location
-            spra1(1) = DBLE(sal(i))
-            p1(1) = DBLE(p)
+            spra1(1) = sal(i)
+            p1(1) = p
             CALL sp2sa_geo (spra1, 1, sabs1, p1)
         ELSE
-            sabs1(1) = DBLE(sal(i))
+            sabs1(1) = sal(i)
         END IF
         ! Then convert temperature
-        tempis90 = gsw_t_from_ct (sabs1(1), DBLE(temp(i)), DBLE(p))
+        tempis90 = gsw_t_from_ct (DBLE(sabs1(1)), DBLE(temp(i)), DBLE(p))
         tempis68  = (tempis90 - 0.0002_r8) / 0.99975_r8
      ELSE
         PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
@@ -1030,14 +1028,27 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
            STOP
         ENDIF
 
+!       Compute in-situ density [kg/m^3]
+        ! If Absolute salinity is given
+        IF (trim(opS) == 'Sabs')  THEN
+           ! If in-situ or potential temperature is given
+           IF (trim(optT) /= 'Scsv') THEN
+              ! First compute conservative temperature
+              tempcsv = gsw_ct_from_t (DBLE(ssal), tempis90, DBLE(p))
+           ELSE
+              tempcsv = DBLE(temp(i))
+           ENDIF
+           rhoSW = gsw_rho(DBLE(ssal), tempcsv, prb)
+        ELSE
+           rhoSW = rho(ssal, SGLE(tempis68), SGLE(prb))
+        ENDIF
+
 !       Either convert units of DIC and ALK (MODEL case) or not (DATA case)
         IF     (trim(optCON) == 'mol/kg') THEN
 !          No conversion:  drho = 1.
 !          print *,'DIC and ALK already given in mol/kg (std DATA units)'
            drho = 1.0
         ELSEIF (trim(optCON) == 'mol/m3') THEN
-!          Compute in-situ density [kg/m^3]
-           rhoSW = rho(ssal, SGLE(tempis68), SGLE(prb))
 !          Do conversion:
 !          print *,"DIC and ALK given in mol/m^3 (std MODEL units)"
            drho = DBLE(rhoSW)
@@ -1057,54 +1068,28 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
 
 !       Convert from Absolute to Practical salinity if needed
         IF (trim(opS) == 'Sabs')  THEN
+           sabs1(1) = ssal   ! absolute sal.
+           ! If longitude is passed in
            IF (PRESENT(lon)) THEN
-               ! longitude is passed in
-               sabs1(1) = s   ! absolute sal.
-               p1(1) = DBLE(p)
+               p1(1) = p
                IF (lon(i) .NE. 1e20_rx .AND. lat(i) .NE. 1.e20_rx) THEN
                   ! longitude and latitude are defined
-                  lon1(1) = DBLE(lon(i))
-                  lat1(1) = DBLE(lat(i))
-                  CALL sa2sp_geo (sabs1, 1, s1, p1, lon1, lat1)
+                  lon1(1) = lon(i)
+                  lat1(1) = lat(i)
+                  CALL sa2sp_geo (sabs1, 1, spra1, p1, lon1, lat1)
                ELSE
                   ! will use default geographic location
-                  CALL sa2sp_geo (sabs1, 1, s1, p1)
+                  CALL sa2sp_geo (sabs1, 1, spra1, p1)
                ENDIF
            ELSE
-               sabs1(1) = s
                tc1(1) = tc
                ta1(1) = ta
                sit1(1) = sit
                ! Nitrate total : from Phosphate using Redfield ratio (16)
                nt1(1) = 16.0 * pt
-               CALL sa2sp_chem(sabs1, ta1, tc1, nt1, sit1, 1, s1)
+               CALL sa2sp_chem(sabs1, ta1, tc1, nt1, sit1, 1, spra1)
            ENDIF
-           s = s1(1)
-
-           ! Note: When optCON = 'mol/m3' and opS = 'Sabs' and longitude is not given
-           !       
-           !       computed water density (drho) is wrong because it has been calculated with a wrong salinity
-           !       (absolute instead of practical saliniry)
-           !       and, in the same manner, ta, tc, pt and sit are wrong 
-           !       practical saliniry 's' is wrong too since it was computed from ta, tc, pt and sit
-           !       but the relative error was small on ta, ta, pt and sit
-           !       It is even smaller on 's'
-           !       Ideally, we shoul iterate: compute drho then 's' then drho again and so on... until it converges.
-           !       We choose to recompute rho, ta, ta, pt, sit only once.
-           
-           ! Value of salinity has changed
-           ! re-Compute in-situ density [kg/m^3]
-           rhoSW = rho(s, SGLE(tempis68), SGLE(prb))
-           IF (trim(optCON) == 'mol/m3') THEN
-              ! re-Do conversion:
-              drho = DBLE(rhoSW)
-
-              ! Re-Initialise ta, tc, pt and sit
-              ta  = DBLE(salk)  / drho
-              tc  = DBLE(sdic)  / drho
-              pt  = DBLE(sphos) / drho
-              sit = DBLE(ssil)  / drho
-           ENDIF
+           s = DBLE(spra1(1))
         ENDIF
           
 !       Get all equilibrium constants and total concentrations of SO4, F, B

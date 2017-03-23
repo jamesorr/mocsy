@@ -220,7 +220,8 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=r8) :: Phydro_atm, Patmd, Ptot, Rgas_atm, vbarCO2
 
 ! local 1-long array version of scalar variables
-  REAL(kind=r8), DIMENSION(1) :: sa1, spra1, sabs1, s1, p1, lon1, lat1
+  REAL(kind=rx), DIMENSION(1) :: lon1, lat1
+  REAL(kind=rx), DIMENSION(1) :: p1, spra1, sabs1
 
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
@@ -335,14 +336,14 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         ! First convert salinity to absolute sal., if necessary
         IF (trim(opS) == 'Sprc')  THEN
             ! conversion will use default geographic location
-            spra1(1) = DBLE(sal(i))
-            p1(1) = DBLE(p)
+            spra1(1) = sal(i)
+            p1(1) = p
             CALL sp2sa_geo (spra1, 1, sabs1, p1)
         ELSE
-            sabs1(1) = DBLE(sal(i))
+            sabs1(1) = sal(i)
         END IF
         ! Then convert temperature
-        tempis = SGLE(gsw_t_from_ct (sabs1(1), DBLE(temp(i)), DBLE(p)))
+        tempis = SGLE(gsw_t_from_ct (DBLE(sabs1(1)), DBLE(temp(i)), DBLE(p)))
         tempis68  = (tempis - 0.0002_rx) / 0.99975_rx
      ELSE
         PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
@@ -379,22 +380,22 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         IF (trim(opS) == 'Sabs')  THEN
            IF (PRESENT(lon)) THEN
                ! longitude is passed in
-               sa1(1) = DBLE(ssal)
-               p1(1) = DBLE(p)
-               lon1(1) = DBLE(lon(i))
-               lat1(1) = DBLE(lat(i))
+               sabs1(1) = ssal
+               p1(1) = p
+               lon1(1) = lon(i)
+               lat1(1) = lat(i)
            ELSE
-               lon1(1) = 1.e20_r8
-               lat1(1) = 1.e20_r8
+               lon1(1) = 1.e20_rx
+               lat1(1) = 1.e20_rx
            ENDIF
-           IF (lon1(1) .NE. 1.e20_r8 .AND. lat1(1) .NE. 1.e20_r8) THEN
+           IF (lon1(1) .NE. 1.e20_rx .AND. lat1(1) .NE. 1.e20_rx) THEN
               ! longitude and latitude are defined
-              CALL sa2sp_geo (sa1, 1, s1, p1, lon1, lat1)
+              CALL sa2sp_geo (sabs1, 1, spra1, p1, lon1, lat1)
            ELSE
               ! use default geographic location
-              CALL sa2sp_geo (sa1, 1, s1, p1)
+              CALL sa2sp_geo (sabs1, 1, spra1, p1)
            ENDIF
-           s = DBLE(s1(1))
+           s = DBLE(spra1(1))
         ELSE
            s = DBLE(ssal)
         ENDIF
@@ -922,7 +923,8 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   TYPE (DUAL_NUM),PARAMETER:: zero=DUAL_NUM(0d0,0.D0), ten=DUAL_NUM(10d0,0.D0)
 
 ! local 1-long array version of scalar variables
-  REAL(kind=r8), DIMENSION(1) :: sa1, s1, p1, lon1, lat1
+  REAL(kind=rx), DIMENSION(1) :: lon1, lat1
+  REAL(kind=rx), DIMENSION(1) :: p1, spra1, sabs1
 
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
@@ -1029,11 +1031,21 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         dtempot   = 0.99975*dtempot68 + 0.0002
      ELSEIF (trim(optT) == 'Tcsv' .OR. trim(optT) == 'tcsv') THEN
 !       Convert given conservative temperature to in-situ temperature
-        tempis%x_ad_ = gsw_t_from_ct (sal(i)%x_ad_, temp(i)%x_ad_, p%x_ad_)
+        ! First convert salinity to absolute sal., if necessary
+        IF (trim(opS) == 'Sprc')  THEN
+            ! conversion will use default geographic location
+            spra1(1) = SGLE(sal(i)%x_ad_)
+            p1(1) = SGLE(p%x_ad_)
+            CALL sp2sa_geo (spra1, 1, sabs1, p1)
+        ELSE
+            sabs1(1) = SGLE(sal(i)%x_ad_)
+        END IF
+        ! Then convert temperature
+        tempis%x_ad_ = gsw_t_from_ct (DBLE(sabs1(1)), temp(i)%x_ad_, p%x_ad_)
 !       Sorry but no computation of derivatives because gsw_t_from_ct does not support it.
 !          instead, assume that any derivative d(tempis)/dx is as d(temp)/dx
         tempis%xp_ad_(:) = temp(i)%xp_ad_(:)
-        tempis68  = (tempis - 0.0002_rx) / 0.99975_rx
+        tempis68  = (tempis - 0.0002_r8) / 0.99975_r8
      ELSE
         PRINT *,"optT must be either 'Tpot, 'Tinsitu' or 'Tcsv'"
         PRINT *,"you specified optT =", trim(optT) 
@@ -1069,22 +1081,22 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
         IF (trim(opS) == 'Sabs')  THEN
            IF (PRESENT(lon)) THEN
                ! longitude is passed in
-               sa1(1) = ssal%x_ad_
-               p1(1) = p%x_ad_
-               lon1(1) = DBLE(lon(i))
-               lat1(1) = DBLE(lat(i))
+               sabs1(1) = SGLE(ssal%x_ad_)
+               p1(1) = SGLE(p%x_ad_)
+               lon1(1) = lon(i)
+               lat1(1) = lat(i)
            ELSE
-               lon1(1) = 1.e20_r8
-               lat1(1) = 1.e20_r8
+               lon1(1) = 1.e20_rx
+               lat1(1) = 1.e20_rx
            ENDIF
-           IF (lon1(1) .NE. 1.e20_r8 .AND. lat1(1) .NE. 1.e20_r8) THEN
+           IF (lon1(1) .NE. 1.e20_rx .AND. lat1(1) .NE. 1.e20_rx) THEN
               ! longitude and latitude are defined
-              CALL sa2sp_geo (sa1, 1, s1, p1, lon1, lat1)
+              CALL sa2sp_geo (sabs1, 1, spra1, p1, lon1, lat1)
            ELSE
               ! use default geographic location
-              CALL sa2sp_geo (sa1, 1, s1, p1)
+              CALL sa2sp_geo (sabs1, 1, spra1, p1)
            ENDIF
-           s%x_ad_ = s1(1)
+           s%x_ad_ = DBLE(spra1(1))
 !          Sorry but no computation of derivatives because sa2sp_geo does not support it.
 !            instead, assume that any derivative d(s)/dx is as d(sal)/dx
            s%xp_ad_(:) = ssal%xp_ad_(:)
