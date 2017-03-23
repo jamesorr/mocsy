@@ -140,7 +140,6 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   USE mp80
   USE mrho
   USE meos
-  USE gsw_mod_toolbox, only: gsw_t_from_ct
   USE msw_temp
   USE mvarsolver
 
@@ -255,7 +254,7 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
   USE mp80
   USE mrho
   USE meos
-  USE gsw_mod_toolbox, only: gsw_t_from_ct
+  USE gsw_mod_toolbox, only: gsw_t_from_ct, gsw_ct_from_t, gsw_rho
   USE msw_temp
   USE mvarsolver
 
@@ -347,7 +346,7 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
 
 ! Local variables
   REAL(kind=rx) :: ssal, salk, sdic, ssil, sphos
-  REAL(kind=r8) :: tempot, tempis68, tempot68, tempis90
+  REAL(kind=r8) :: tempot, tempis68, tempot68, tempis90, tempcsv
   REAL(kind=r8) :: drho
 
   ! local 1-long array version of scalar variables
@@ -558,7 +557,19 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
         ENDIF
 
 !       Compute in-situ density [kg/m^3]
-        rhoSW(i) = rho(ssal, SGLE(tempis68), SGLE(prb))
+        ! If Absolute salinity is given
+        IF (trim(opS) == 'Sabs')  THEN
+           ! If in-situ or potential temperature is given
+           IF (trim(optT) /= 'Scsv') THEN
+              ! First compute conservative temperature
+              tempcsv = gsw_ct_from_t (ssal, tempis90, p(i))
+           ELSE
+              tempcsv = temp(i)
+           ENDIF
+           rhoSW(i) = gsw_rho(ssal, tempcsv, prb)
+        ELSE
+           rhoSW(i) = rho(ssal, SGLE(tempis68), SGLE(prb))
+        ENDIF
 
 !       Either convert units of DIC and ALK (MODEL case) or not (DATA case)
         IF     (trim(optCON) == 'mol/kg') THEN
@@ -609,31 +620,6 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
            ENDIF
            s = s1(1)
            IF (PRESENT(salprac)) salprac(i) = SGLE(s)
-           
-           ! Note: When optCON = 'mol/m3' and opS = 'Sabs' and longitude is not given
-           !       
-           !       computed water density (drho) is wrong because it has been calculated with a wrong salinity
-           !       (absolute instead of practical saliniry)
-           !       and, in the same manner, ta, tc, pt and sit are wrong 
-           !       practical saliniry 's' is wrong too since it was computed from ta, tc, pt and sit
-           !       but the relative error was small on ta, ta, pt and sit
-           !       It is even smaller on 's'
-           !       Ideally, we shoul iterate: compute drho then 's' then drho again and so on... until it converges.
-           !       We choose to recompute rho, ta, ta, pt, sit only once.
-           
-           ! Value of salinity has changed
-           ! re-Compute in-situ density [kg/m^3]
-           rhoSW(i) = rho(s, SGLE(tempis68), SGLE(prb))
-           IF (trim(optCON) == 'mol/m3') THEN
-              ! re-Do conversion:
-              drho = DBLE(rhoSW(i))
-
-              ! Re-Initialise ta, tc, pt and sit
-              ta  = DBLE(salk)  / drho
-              tc  = DBLE(sdic)  / drho
-              pt  = DBLE(sphos) / drho
-              sit = DBLE(ssil)  / drho
-           ENDIF
         ENDIF
           
 !       Get all equilibrium constants and total concentrations of SO4, F, B
