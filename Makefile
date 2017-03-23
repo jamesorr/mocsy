@@ -24,20 +24,45 @@ else
 endif
 
 #=======================================================================
-#               define location of installed GSW-fortran package
+#               define GSW-fortran files 
 #=======================================================================
-GSW = ../GSW-Fortran
+GSW = src/GSW
 
-# Note: we shall look for GSW compiled modules in subfolder "modules"
-GSW_MOD = $(GSW)/modules
-# we shall look for GSW compiled files ub subfolder "toolbox"
-GSW_TOOL = $(GSW)/toolbox
+GSW_MOD_SRCS := \
+	$(GSW)/gsw_mod_kinds.f90 \
+	$(GSW)/gsw_mod_teos10_constants.f90 \
+	$(GSW)/gsw_mod_toolbox.f90 \
+	$(GSW)/gsw_mod_error_functions.f90 \
+	$(GSW)/gsw_mod_baltic_data.f90 \
+	$(GSW)/gsw_mod_saar_data.f90 \
+	$(GSW)/gsw_mod_specvol_coefficients.f90
 
-GSW_TOOL_SRCS := $(wildcard $(GSW_TOOL)/*.f90)
-GSW_TOOL_OBJS := $(GSW_TOOL_SRCS:.f90=.o)
-
-GSW_MOD_SRCS := $(wildcard $(GSW_MOD)/*.f90)
 GSW_MOD_OBJS := $(GSW_MOD_SRCS:.f90=.o)
+
+GSW_TOOL_SRCS := \
+	$(GSW)/gsw_t_from_ct.f90 \
+	$(GSW)/gsw_ct_from_t.f90 \
+	$(GSW)/gsw_ct_from_pt.f90 \
+	$(GSW)/gsw_pt_from_ct.f90 \
+	$(GSW)/gsw_pt_from_t.f90 \
+	$(GSW)/gsw_pt0_from_t.f90 \
+	$(GSW)/gsw_gibbs_pt0_pt0.f90 \
+	$(GSW)/gsw_entropy_part.f90 \
+	$(GSW)/gsw_entropy_part_zerop.f90 \
+	$(GSW)/gsw_gibbs.f90 \
+	$(GSW)/gsw_sp_from_sa.f90 \
+	$(GSW)/gsw_sa_from_sp.f90 \
+	$(GSW)/gsw_saar.f90 \
+	$(GSW)/gsw_sp_from_sa_baltic.f90 \
+	$(GSW)/gsw_sa_from_sp_baltic.f90 \
+	$(GSW)/gsw_util_xinterp1.f90 \
+	$(GSW)/gsw_util_indx.f90 \
+	$(GSW)/gsw_add_barrier.f90 \
+	$(GSW)/gsw_add_mean.f90 \
+	$(GSW)/gsw_rho.f90 \
+	$(GSW)/gsw_specvol.f90
+
+GSW_TOOL_OBJS := $(GSW_TOOL_SRCS:.f90=.o)
 
 #=======================================================================
 #=======================================================================
@@ -56,7 +81,7 @@ F90 = gfortran
 FCFLAGS = -fPIC -cpp -DUSE_PRECISION=$(PRECISION)
 #DEBUGFLAGS = -g
 LDFLAGS = -L./ -lmocsy
-INCLUDEFLAGS = -I$(GSW_MOD) -Isrc
+INCLUDEFLAGS = -Isrc
 
 
 # List of executables to be built within the package
@@ -67,114 +92,84 @@ all: $(PROGRAMS)
 
 #---------------------------------------------------------------------------
 
-# Look for .f90 files first in the 'src' directory, then in the 'examples' directory
-
-vpath %.f90 src
+# Look for .f90 test files in the 'examples' directory
 vpath %     examples
 
-#vpath %.h src
+SOURCES = src/singledouble.f90 \
+          src/eos.f90 \
+          src/sw_adtg.f90 \
+          src/sw_ptmp.f90 \
+          src/sw_temp.f90 \
+          src/tpot.f90 \
+          src/tis.f90 \
+          src/p80.f90 \
+          src/phsolvers.f90 \
+          src/rho.f90 \
+          src/rhoinsitu.f90 \
+          src/depth2press.f90 \
+          src/constants.f90 \
+          src/varsolver.f90 \
+          src/vars.f90 \
+          src/derivauto.f90 \
+          src/derivnum.f90 \
+          src/errors.f90 \
+          src/buffesm.f90 \
+          src/p2fCO2.f90 \
+          src/f2pCO2.f90 \
+          src/gasx.f90 
 
-SOURCES = singledouble.f90 \
-          eos.f90 \
-          sw_adtg.f90 \
-          sw_ptmp.f90 \
-          sw_temp.f90 \
-          tpot.f90 \
-          tis.f90 \
-          p80.f90 \
-          phsolvers.f90 \
-          rho.f90 \
-          rhoinsitu.f90 \
-          depth2press.f90 \
-          constants.f90 \
-          varsolver.f90 \
-          vars.f90 \
-          derivauto.f90 \
-          derivnum.f90 \
-          errors.f90 \
-          buffesm.f90 \
-          p2fCO2.f90 \
-          f2pCO2.f90 \
-          gasx.f90 
-
-OBJS =  singledouble.o \
-        eos.o \
-        sw_adtg.o \
-        sw_ptmp.o \
-        sw_temp.o \
-        tpot.o \
-        tis.o \
-        p80.o \
-        phsolvers.o \
-        rho.o \
-        rhoinsitu.o \
-        depth2press.o \
-        constants.o \
-        varsolver.o \
-        vars.o \
-	derivauto.o \
-	derivnum.o \
-	errors.o \
-        buffesm.o \
-        p2fCO2.o \
-        f2pCO2.o \
-        gasx.o
+OBJS := $(SOURCES:.f90=.o)
 
 EXEC = test_mocsy
 
 library = libmocsy.a
 #---------------------------------------------------------------------------
 
-# Build GSW archive
-libgsw.a: $(GSW_TOOL_SRCS) $(GSW_MOD_SRCS)
-	cd $(GSW)/test && $(MAKE)
-	ar cr libgsw.a $(GSW_TOOL_OBJS) $(GSW_MOD_OBJS)
-
-#---------------------------------------------------------------------------
-# Build the mocsy library containing the object files (not used, illustration only)
-$(library): libgsw.a DNAD.o $(OBJS)
-	ar cr $(library) DNAD.o $(OBJS)
+# Build the mocsy library containing the object files
+$(library): $(GSW_MOD_OBJS) $(GSW_TOOL_OBJS) src/DNAD.o $(OBJS)
+	ar cr $@ $^
 
 # Build the Fortran program executable that tests the mocsy library (test_mocsy)
-$(EXEC): $(EXEC).o libgsw.a DNAD.o $(OBJS) test_mocsy.o $(library)
-	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS) -lgsw
+$(EXEC): $(library) $(EXEC).o
+	$(FC) $(FCFLAGS) -o $@ $@.o $(LDFLAGS)
 
 # Build the shared object file for python
-mocsy.so: libgsw.a DNAD.o $(SOURCES)
-	cp src/*.f90 .
+mocsy.so: $(GSW_MOD_OBJS) $(GSW_TOOL_OBJS) src/DNAD.o $(SOURCES)
+	# cp src/*.f90 .
 	# Select the kind map
 	cp -f -s src/$(KIND_MAP) .f2py_f2cmap
-	f2py -c -L. -lgsw $(SOURCES) skip: vars_sprac : skip: vars_pertK : skip: varsolver_dnad :   \
-	skip: constants_dnad : skip: sw_ptmp_dnad : skip: sw_temp_dnad : skip: sw_adtg_dnad :   \
-	skip: rho_dnad : skip: equation_at_dnad : skip: solve_at_general_dnad :                 \
-	DNAD.o -m mocsy --fcompiler=gnu95 --f90flags="$(FCFLAGS) $(INCLUDEFLAGS)"
-	rm $(SOURCES) DNAD.f90
+	f2py -c -L. $(SOURCES) skip: vars_sprac : skip: vars_pertK : skip: varsolver_dnad :   \
+	    skip: constants_dnad : skip: sw_ptmp_dnad : skip: sw_temp_dnad : skip: sw_adtg_dnad :   \
+	    skip: rho_dnad : skip: equation_at_dnad : skip: solve_at_general_dnad :                 \
+	    $(GSW_MOD_OBJS) $(GSW_TOOL_OBJS) src/DNAD.o -m mocsy --fcompiler=gnu95                      \
+	    --f90flags="$(FCFLAGS) $(INCLUDEFLAGS)"
+	# rm $(SOURCES) DNAD.f90
 #---------------------------------------------------------------------------
 # Other test programs
 
-test_vars: test_vars.o libgsw.a $(OBJS) $(library)
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_vars: $(library) test_vars.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) 
 
-test_errors: test_errors.o libgsw.a $(OBJS) $(library)
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_errors: $(library) test_errors.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) 
 
-test_derivauto: test_derivauto.o libgsw.a $(OBJS) $(library)
-	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_derivauto: $(library) test_derivauto.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
-test_derivnum: test_derivnum.o libgsw.a $(OBJS) $(library)
-	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_derivnum: $(library) test_derivnum.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
-test_buffesm: test_buffesm.o libgsw.a $(OBJS) $(library)
-	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_buffesm: $(library) test_buffesm.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS)
 
-test_phizero: test_phizero.o libgsw.a $(OBJS) $(library)
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_phizero: $(library) test_phizero.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) 
 
-test_kprime: test_kprime.o libgsw.a $(OBJS) $(library)
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_kprime: $(library) test_kprime.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) 
 
-test_kzero: test_kzero.o libgsw.a $(OBJS) $(library)
-	${FC} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) -lgsw
+test_kzero: $(library) test_kzero.o
+	${F90} ${FCFLAGS} -o $@ $@.o $(LDFLAGS) 
 
 # General rule for building prog from prog.o; $^ (GNU extension) is
 # used in order to list additional object files on which the
@@ -186,17 +181,16 @@ test_kzero: test_kzero.o libgsw.a $(OBJS) $(library)
 # used in order to list only the first prerequisite (the source file)
 # and not the additional prerequisites such as module or include files
 %.o: %.f90
-	$(FC) $(FCFLAGS) $(INCLUDEFLAGS) -c $<
+	$(FC) $(FCFLAGS) $(INCLUDEFLAGS) -c $< -o $@
 
 %.o: %.F90
-	$(FC) $(FCFLAGS) $(INCLUDEFLAGS) -c $<
+	$(FC) $(FCFLAGS) $(INCLUDEFLAGS) -c $< -o $@
 
 # Utility targets
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o *.mod *.so *.a
-	cd $(GSW)/test && $(MAKE) clean
+	rm -f *.o src/*.o $(GSW)/*.o *.mod *.so *.a
 
 veryclean: clean
 	rm -f *~ $(PROGRAMS) 
