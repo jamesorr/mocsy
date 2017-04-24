@@ -13,8 +13,8 @@
 
 # set to  2 if you wish results in DOUBLE precision
 # set to 1 or 0 if SINGLE
-PRECISION = 2
-#PRECISION = 1
+#PRECISION = 2
+PRECISION = 1
 
 # mapping between Fortran and C types
 ifeq (${PRECISION}, 2)
@@ -94,6 +94,10 @@ all: $(PROGRAMS)
 
 # Look for .f90 test files in the 'examples' directory
 vpath %     examples
+
+# Attention: src/singledouble.f90 is automatically generated
+src/singledouble.f90 : src/singledouble.m4
+	m4 -DUSE_PRECISION=$(PRECISION) $^ > $@
 
 SOURCES = src/singledouble.f90 \
           src/eos.f90 \
@@ -190,7 +194,7 @@ test_kzero: $(library) test_kzero.o
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o src/*.o $(GSW)/*.o *.mod *.so *.a
+	rm -f *.o src/*.o $(GSW)/*.o *.mod *.so *.a src/singledouble.f90
 
 veryclean: clean
 	rm -f *~ $(PROGRAMS) 
