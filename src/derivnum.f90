@@ -15,7 +15,7 @@ CONTAINS
 SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,                   &
                      dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
                      temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, derivar,   &
-                     optCON, optT, optP, optB, optK1K2, optKf, optGAS                )
+                     optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon     )
   !   Purpose:
   !     Computes numerical derivatives of standard carbonate system variables 
   !     (H+, pCO2, fCO2, CO2*, HCO3- and CO3--, OmegaA, OmegaC) with respect to one given input variable
@@ -33,6 +33,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !             = dummy array (unused when optP='db')
   !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not in situ temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
+  !             = conservative temperature [degrees C] (with optT='Tcsv')
   !     sal     = salinity in [psu]
   !     alk     = total alkalinity in [eq/m^3] with optCON = 'mol/m3'
   !             =               [eq/kg]  with optCON = 'mol/kg'
@@ -60,6 +61,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
   !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
+  !       -> 'Tcsv' means input is Conservative Temperature (in situ Temp "tempis" is computed)
   !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
   !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
@@ -95,6 +97,32 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
   !                      considers in situ T & total pressure (atm + hydrostatic)
   !     ---------
+  !     optS: choose practical [psu] or absolute [g/kg] salinity as input
+  !     ----------
+  !       -> 'Sprc' means input is practical salinity according to EOS-80 convention
+  !       -> 'Sabs' means input is absolute salinity according to TEOS-10 convention (practical sal. will be computed)
+  !     ---------
+  !     lon:  longitude in degrees East
+  !     ----------
+  !        Optional, it may be used along with latitude when optS is "Sabs".
+  !        Then, they are parameters for conversion from Absolute to Practical Salinity.
+  !
+  !        When seawater is not of standard composition, Practical Salinity alone is not sufficient 
+  !        to compute Absolute Salinity and vice-versa. One needs to know the chemical composition, 
+  !        mainly silicate and nitrate concentration. When those concentrations are unknown and 'lon' and 'lat' 
+  !        are given, absolute salinity conversion is based on WOA silicate concentration at given location. 
+  !
+  !        Alternative when optS is 'Sabs' :
+  !        -------------------------------
+  !        When silicate and phosphate concentrations are known, nitrate concentration is inferred from phosphate
+  !        (using Redfield ratio), then practical salinity is computed from absolute salinity, 
+  !        total alcalinity (alk), DIC (dic), silicate (sil) and phosphate (phos).
+  !        In that case, do not pass optional parameter 'lon'.
+  !
+  !        When neither chemical composition nor location are known, an arbitrary geographic point is chosen:
+  !        mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
+  !        In that case, do pass parameter 'lon' and set each of its elements to 1.e20.
+  !     ---------
 
   !     OUTPUT variables:
   !     =================
@@ -120,7 +148,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
-  !> salinity <b>[psu]</b>
+  !> salinity <b>[psu] or [g/kg]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: sal
   !> total alkalinity in <b>[eq/m^3]</b> (when optCON = 'mol/m3') OR in <b>[eq/kg]</b>  (when optCON = 'mol/kg')
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: alk
@@ -165,6 +193,10 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Output variables:
   !> derivative of H on the <b>total scale</b>
@@ -355,14 +387,14 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
         call vars_pertK(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),      &
                         OmegaA(:,1), OmegaC(:,1),                                          &
                         atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                        var_index, -abs_delta,                                              &
-                        optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+                        var_index, -abs_delta,                                             &
+                        optCON, optT, optP, opB, opK1K2, opKf, opGAS,  optS, lon           ) 
         ! Call routine vars_pertK() with request to decrease the same K value
         call vars_pertK(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),      &
                         OmegaA(:,2), OmegaC(:,2),                                          &
                         atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                        var_index, abs_delta,                                             &
-                        optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+                        var_index, abs_delta,                                              &
+                        optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon            )
 
     ELSE    ! we do NOT derive w/ respect to one of the  Ks
     
@@ -408,56 +440,56 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, ainput1, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, ainput2, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
             CASE (2)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, ainput1, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, ainput2, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
             CASE (3)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, asil, ainput1, aPatm, adepth, alat, 1,       &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, asil, ainput2, aPatm, adepth, alat, 1,       &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
             CASE (4)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, ainput1, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, ainput2, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
             CASE (5)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 ainput1, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 ainput2, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
             CASE (6)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, ainput1, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, ainput2, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                        ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
             CASE (8)
                 ! For Bt (must treat with vars_pertK, but not quite like other 'constants' to account for proportionality to S)
                 ! Call routine vars_pertK() with request to increase one Bt value
@@ -465,13 +497,13 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                                 OmegaA(:,1), OmegaC(:,1),                                          &
                                 atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
                                 var_index, -abs_delta,                                             &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon            ) 
                 ! Call routine vars_pertK() with request to decrease the same Bt value
                 call vars_pertK(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),      &
                                 OmegaA(:,2), OmegaC(:,2),                                          &
                                 atemp, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
                                 var_index, abs_delta,                                              &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS                       ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon            ) 
         END SELECT
     ENDIF
     

@@ -8,7 +8,7 @@ CONTAINS
 SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                                    &
                   ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                   temp, sal, alk, dic, sil, phos, kw660, xco2, Patm, dz1, N,                &
-                  optCON, optT, optP, optB, optK1K2, optKf, optGAS                          )
+                  optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, lat          )
 
   !   Purpose:
   !     Computes air-sea CO2 flux & surface ocean carbonate system vars (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)
@@ -24,7 +24,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !     dz1     = depth of the top vertical layer of the model [m]
   !     temp    = surface potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not in situ temp)
   !             = surface in situ temperature [degrees C] (with optT='Tinsitu', e.g., for data)
-  !     sal     = surface salinity in [psu]
+  !     sal     = surface salinity in [psu] (practical sal.) or [g/kg] (absolute sal.)
   !     alk     = surface total alkalinity in [eq/m^3] with optCON = 'mol/m3'
   !             =                             [eq/kg]  with optCON = 'mol/kg'
   !     dic     = surface dissolved inorganic carbon [mol/m^3] with optCON = 'mol/m3'
@@ -41,11 +41,12 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !       -> 'mol/kg' for DIC and ALK given on mokal scale, i.e., in mol/kg  (std DATA units)
   !       -> 'mol/m3' for DIC and ALK given in mol/m^3 (std MODEL units)
   !     -----------
-  !     optT: choose in situ vs. potential temperature as input
+  !     optT: choose in-situ, potential or conservative temperature as input
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
   !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
-  !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
+  !       -> 'Tcsv' means input is Conservative Temperature (in situ Temp "tempis" is computed)
+  !       -> 'Tinsitu' means input is already in-situ Temperature ("tempis" not computed)
   !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
   !     ---------
@@ -81,6 +82,34 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
   !                      considers in situ T & total pressure (atm + hydrostatic)
   !     ---------
+  !     optS: choose practical [psu] or absolute [g/kg] salinity as input
+  !     ----------
+  !       -> 'Sprc' means input is practical salinity according to EOS-80 convention
+  !       -> 'Sabs' means input is absolute salinity according to TEOS-10 convention (practical sal. will be computed)
+  !     ---------
+  !     lon:  longitude in degrees East
+  !     ----------
+  !     lat:  latitude in degrees North
+  !     ----------
+  !        lat and lon are optional; they may be used when optS is "Sabs" as conversion parameters 
+  !           from Absolute to Practical Salinity.
+  !
+  !        When seawater is not of standard composition, Practical Salinity alone is not sufficient 
+  !        to compute Absolute Salinity and vice-versa. One needs to know the chemical composition, 
+  !        mainly silicate and nitrate concentration. When those concentrations are unknown and 'lon' and 'lat' 
+  !        are given, absolute salinity conversion is based on WOA silicate concentration at given location. 
+  !
+  !        Alternative when optS is 'Sabs' :
+  !        -------------------------------
+  !        When silicate and phosphate concentrations are known, nitrate concentration is inferred from phosphate
+  !        (using Redfield ratio), then practical salinity is computed from absolute salinity, 
+  !        total alcalinity (alk), DIC (dic), silicate (sil) and phosphate (phos).
+  !        In that case, do not pass optional parameter 'lon' an 'lat'
+  !
+  !        When neither chemical composition nor location are known, an arbitrary geographic point is chosen:
+  !        mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
+  !        In that case, do pass parameter 'lon' and 'lat' and set each of their elements to 1.e20.
+  !     ---------
 
   !     OUTPUT variables:
   !     =================
@@ -107,6 +136,8 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 #endif
 
   USE msingledouble
+  USE meos
+  USE gsw_mod_toolbox, only: gsw_t_from_ct
   USE mvars
   USE mp2fCO2
 
@@ -166,6 +197,13 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+  !> latitude <b>[degrees north]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
 
 ! Output variables:
   !> air-to-sea CO2 flux <b>[mol/(m^2 * s)]</b>
@@ -205,6 +243,13 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   REAL(kind=rx), DIMENSION(N) :: pCO2atm, fCO2atm
   REAL(kind=rx), DIMENSION(N) :: depth0, lat0
  
+  ! local 1-long array version of scalar variables
+  REAL(kind=r8), DIMENSION(1) :: sa1, s1, p1, lon1, lat1
+  REAL(kind=r8), DIMENSION(1) :: tc1, ta1, sit1, nt1
+  
+  ! practical salinity [psu] computed when absolute saliniry is given 
+  REAL(kind=rx), DIMENSION(N) :: salprac
+
   INTEGER :: i
   INTEGER :: kcomp
 
@@ -216,6 +261,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
 
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -262,17 +308,32 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   ELSE
     opGAS = 'Pinsitu'
   ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
+  ENDIF
 
   depth0 = fco2 * 0.0
   lat0   = depth0
-! Compute derived variables from input (DIC, ALK, ...)
-  CALL vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
-            temp, sal, alk, dic, sil, phos, Patm, depth0, lat0, N,                    &
-            opCON, opT, opP, opB, opK1K2, opKf, opGAS                                 )
 
+! Compute derived variables from input (DIC, ALK, ...)
+  IF (PRESENT(lat)) THEN
+    CALL vars_sprac(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
+              temp, sal, alk, dic, sil, phos, Patm, depth0, lat, N,                     &
+              opCON, opT, opP, opB, opK1K2, opKf, opGAS, opS, lon, salprac              )
+  ELSE
+    CALL vars_sprac(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
+              temp, sal, alk, dic, sil, phos, Patm, depth0, lat0, N,                    &
+              opCON, opT, opP, opB, opK1K2, opKf, opGAS, opS, lon, salprac              )
+  ENDIF
+  IF (TRIM(opS) == 'Sprc') THEN
+    salprac(:) = sal(:)
+  ENDIF
+  
 ! Compute pCO2atm [uatm] from xCO2 [ppm], atmospheric pressure [atm], & vapor pressure of seawater
 ! pCO2atm = (Patm - pH20(i)) * xCO2,   where pH20 is the vapor pressure of seawater [atm]
-  CALL x2pCO2atm(xco2, temp, sal, Patm, N, pco2atm)
+  CALL x2pCO2atm(xco2, temp, salprac, Patm, N, pco2atm)
 
 ! Compute fCO2atm [uatm] from pCO2atm [uatm] & fugacity coefficient [unitless]
 ! fCO2atm = pCO2atm * fugcoeff,   where fugcoeff= exp(Patm*(B + 2.0*xc2*Del)/(R*tk) )
@@ -295,7 +356,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 
 !       Surface K0 [(mol/kg) / atm] at T, S of surface water
         tmp = 9345.17d0*invtk - 60.2409d0 + 23.3585d0 * LOG(tk/100.0d0)
-        K0 = EXP( tmp + DBLE(sal(i))*(0.023517d0 - 0.00023656d0*tk + 0.0047036e-4_r8*tk*tk) )
+        K0 = EXP( tmp + DBLE(salprac(i))*(0.023517d0 - 0.00023656d0*tk + 0.0047036e-4_r8*tk*tk) )
 
 !       "Atmospheric" [CO2*], air-sea CO2 flux, sfc DIC rate of change, & Delta pCO2
         co2starair = K0 * DBLE(fco2atm(i)) * 1.0e-6_r8 * DBLE(rhoSW(i)) !Equil. [CO2*] for atm CO2 at Patm & sfc-water T,S [mol/m3]

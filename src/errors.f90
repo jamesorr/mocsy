@@ -12,7 +12,8 @@ CONTAINS
 SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,         &
                 etemp, esal, ealk, edic, esil, ephos,                        &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS, r, epK     )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, &
+                r, epK     )
          
 !     This subroutine does error propagation on the computation of carbonate system variables 
 !     from errors (or uncertainties) on six input 
@@ -142,6 +143,10 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Output variables:
   !> total error to [H+] concentration  (mol/kg) on the <b>total scale</b>
@@ -285,7 +290,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
   CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
             dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, 'alk',     &
-            optCON, optT, optP, opB, opK1K2, opKf, opGAS                    )
+            optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
 
   ! Covariance (only when R is not zero)
   IF (r_local .NE. 0.0_r8) THEN
@@ -334,7 +339,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
   CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
             dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, 'dic',     &
-            optCON, optT, optP, opB, opK1K2, opKf, opGAS                    )
+            optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
   
   ! Covariance (only when R is not zero) = 2*r*(dvar/dAt)*(dvar/dCt)*sigma1*sigma2
   IF (r_local .NE. 0.0_r8) THEN
@@ -384,7 +389,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
       CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
                 dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, 'sil',     &
-                optCON, optT, optP, opB, opK1K2, opKf, opGAS                )
+                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
 
       ! Cancels derivative where Sil = 0 
       !   because computation of derivative w/ respect to sil fails in that case
@@ -437,7 +442,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
       CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
                 dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, 'pho',     &
-                optCON, optT, optP, opB, opK1K2, opKf, opGAS                )
+                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
 
       ! Cancels derivative where Phos = 0 
       !   because computation of derivative w/ respect to phos fails in that case
@@ -489,7 +494,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
       CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
                 dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, 'tem',     &
-                optCON, optT, optP, opB, opK1K2, opKf, opGAS                )
+                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
 
       ! multiply derivatives by error
       dh_dx(:)      = dh_dx(:)      * etemp(:)
@@ -529,7 +534,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
       CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
                 dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, 'sal',     &
-                optCON, optT, optP, opB, opK1K2, opKf, opGAS                )
+                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
 
       ! multiply derivatives by error
       dh_dx(:)      = dh_dx(:)      * esal(:)
@@ -599,7 +604,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,   &
               CALL derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              &
                         dco3_dx, dOmegaA_dx, dOmegaC_dx,                                &
                         temp, sal, alk, dic, sil, phos, Patm, depth, lat, N, Kid(i),    &
-                        optCON, optT, optP, opB, opK1K2, opKf, opGAS                    )
+                        optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon         )
 
               ! multiply derivatives by error
               dh_dx(:)      = dh_dx(:)      * eK(:)
