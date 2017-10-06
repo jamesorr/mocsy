@@ -49,6 +49,7 @@ install_requires = [r.strip() for r in require]
 
 sources = [
     'src/singledouble.f90',
+    'src/eos.f90',
     'src/p80.f90',
     'src/sw_adtg.f90',
     'src/sw_ptmp.f90',

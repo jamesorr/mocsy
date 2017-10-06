@@ -11,7 +11,7 @@ CONTAINS
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf, &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,             &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS                   )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon      )
 
   !   Purpose:
   !     Computes buffer factors for seawater carbonate system as defined by Egleston et al. (2010), corrected & modified,
@@ -30,7 +30,7 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   !             = dummy array (unused when optP='db')
   !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not in situ temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
-  !     sal     = salinity in [psu]
+  !     sal     = practical [psu] or absolute [g/kg] salinity
   !     alk     = total alkalinity in [eq/m^3] with optCON = 'mol/m3'
   !             =               [eq/kg]  with optCON = 'mol/kg'
   !     dic     = dissolved inorganic carbon [mol/m^3] with optCON = 'mol/m3'
@@ -51,6 +51,7 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   !     ---------
   !     NOTE: Carbonate chem calculations require IN-SITU temperature (not potential Temperature)
   !       -> 'Tpot' means input is pot. Temperature (in situ Temp "tempis" is computed)
+  !       -> 'Tcsv' means input is Conservative Temperature (in situ Temp "tempis" is computed)
   !       -> 'Tinsitu' means input is already in-situ Temperature, not pot. Temp ("tempis" not computed)
   !     ---------
   !     optP: choose depth (m) vs pressure (db) as input
@@ -85,6 +86,32 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   !                      considers potential T & only atm pressure (hydrostatic press = 0)
   !       -> 'Pinsitu' = 'in situ' fCO2 and pCO2 (accounts for huge effects of pressure)
   !                      considers in situ T & total pressure (atm + hydrostatic)
+  !     ----------
+  !     optS: choose practical [psu] or absolute [g/kg] salinity as input
+  !     ----------
+  !       -> 'Sprc' means input is practical salinity according to EOS-80 convention
+  !       -> 'Sabs' means input is absolute salinity according to TEOS-10 convention (practical sal. will be computed)
+  !     ---------
+  !     lon:  longitude in degrees East
+  !     ----------
+  !        Optional, it may be used along with latitude when optS is "Sabs".
+  !        Then, they are parameters for conversion from Absolute to Practical Salinity.
+  !
+  !        When seawater is not of standard composition, Practical Salinity alone is not sufficient 
+  !        to compute Absolute Salinity and vice-versa. One needs to know the chemical composition, 
+  !        mainly silicate and nitrate concentration. When those concentrations are unknown and 'lon' and 'lat' 
+  !        are given, absolute salinity conversion is based on WOA silicate concentration at given location. 
+  !
+  !        Alternative when optS is 'Sabs' :
+  !        -------------------------------
+  !        When silicate and phosphate concentrations are known, nitrate concentration is inferred from phosphate
+  !        (using Redfield ratio), then practical salinity is computed from absolute salinity, 
+  !        total alcalinity (alk), DIC (dic), silicate (sil) and phosphate (phos).
+  !        In that case, do not pass optional parameter 'lon'.
+  !
+  !        When neither chemical composition nor location are known, an arbitrary geographic point is chosen:
+  !        mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
+  !        In that case, do pass parameter 'lon' and set each of its elements to 1.e20.
   !     ---------
 
   !     OUTPUT variables:
@@ -136,7 +163,8 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
   CHARACTER(6), INTENT(in) :: optCON
-  !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature (in situ Temp is computed, needed for models)
+  !> choose \b 'Tinsitu' for in situ temperature or \b 'Tpot' for potential temperature
+  !>  \b 'Tcsv" for conservative temperature (in two last cases, in-situ Temp is computed, needed for models)
   CHARACTER(7), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
   CHARACTER(2), INTENT(in) :: optP
@@ -158,6 +186,11 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
+!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Output variables:
 ! -----------------
@@ -210,6 +243,8 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   REAL(kind=rx), DIMENSION(N) :: rhoSW
   REAL(kind=rx), DIMENSION(N) :: p
   REAL(kind=rx), DIMENSION(N) :: tempis
+  ! practical salinity [psu] computed when absolute saliniry is given 
+  REAL(kind=rx), DIMENSION(N) :: salprac
 
   ! 3) Other Local variables (needed to compute buffer factors)
   REAL(kind=r8) :: Alkc, Borate, h, oh
@@ -221,20 +256,24 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   
   INTEGER :: i
 
+!  Compute carbonate system variables from DIC, ALK, T, S, nutrients, etc
+!  -------------------------------------------------------------------------------------
+  CALL vars_sprac(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
+             optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac      )
+   
+  IF (optS .EQ. 'Sprc') THEN
+     salprac = sal
+  ENDIF
+  
 ! Get equilibrium constants and total concentrations of SO4, F, B
 ! ------------------------------------------------------------------
   CALL constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,           &
                  K1p, K2p, K3p, Ksi,                               &
                  St, Ft, Bt,                                       &
-                 temp, sal, Patm,                                  &
+                 temp, salprac, Patm,                              &
                  depth, lat, N,                                    &
-                 optT, optP, optB, optK1K2, optKf, optGAS              )
-
-!  Compute carbonate system variables from DIC, ALK, T, S, nutrients, etc
-!  -------------------------------------------------------------------------------------
-   CALL vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
-             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
-             optCON, optT, optP, optB, optK1K2, optKf, optGAS                          )
+                 optT, optP, optB, optK1K2, optKf, optGAS          )
 
 !  Compute buffer factors
 !  ----------------------
