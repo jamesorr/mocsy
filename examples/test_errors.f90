@@ -13,7 +13,8 @@ PROGRAM test_errors
 !  Input variables
    REAL(kind=rx), DIMENSION(6) :: temp, sal, alk, dic, sil, phos, Patm, depth, lat
    REAL(kind=rx), DIMENSION(6) :: temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e
-   REAL(kind=rx), DIMENSION(8) :: epK
+   REAL(kind=rx), DIMENSION(7) :: epK, epKstd, epK0
+   REAL(kind=rx)               :: ebt
    
 !  Input options
    CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2
@@ -30,13 +31,17 @@ PROGRAM test_errors
    optKf   = 'dg'
 
     ! Input errors
-    ALK_e(:) = 2.d-6    ! (2 umol/kg for ALK)
-    DIC_e(:) = 2.d-6    ! (2 umol/kg for DIC)
+    ALK_e(:)  = 2.d-6    ! (2 umol/kg for ALK)
+    DIC_e(:)  = 2.d-6    ! (2 umol/kg for DIC)
     sal_e(:)  = 0.0d0     ! (psu)
     temp_e(:) = 0.0d0    ! (C)
     phos_e(:) = 0.1d-6
-    sil_e(:) = 4.0d-6    
-    epK(:) = 0.0
+    sil_e(:)  = 4.0d-6    
+ !  epK(:)    = 0.0
+ !  epK = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+    epKstd = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+    epK0 = epKstd * 0.0d0
+    ebt = 0.01
 
    ! ------------------
    ! 1s test : 1 record 
@@ -58,42 +63,74 @@ PROGRAM test_errors
     lat(1)    = 0.d0
 
 !  Compute output errors
-   write (*,*) "Test 1: Default error on constants"
-   call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
-             temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
-             temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
-             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf   )
-   write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
-        "eOmegaA     eOmegaC   "
-   DO i = 1,1
-     write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
-   END DO
 
-   write (*,*) "Test 2: NO error on constants"
+   write (*,*) "Test 1: NO error for constants nor for Bt"
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,            &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,                &  ! INPUT
              temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                         &
-             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epK  )
-   write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
-        "eOmegaA     eOmegaC   "
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epK0, ebt=0.0d0 )
+!  write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
+!       "eOmegaA     eOmegaC   "
+   write (*,*) "              eh          epco2          efco2          eco2           ehco3          eco3   ", &
+        "      eOmegaA        eOmegaC   "
    DO i = 1,1
-     write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+     write (*,"(5x,8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
    END DO
 
-   write (*,*) "Test 3: Default error on constants"
-   epK = (/0.004, 0.015, 0.03, 0.01, 0.01, 0.02, 0.02, 0.01/)
+   write (*,*) " "
+   write (*,*) "Test 2: Default error on constants but Bt=0"
+!  epK = (/0.004, 0.015, 0.03, 0.01, 0.01, 0.02, 0.02, 0.01/)
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
              temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
-             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epK )
-   write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
-        "eOmegaA     eOmegaC   "
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epKstd, ebt=0.0d0 )
+   write (*,*) "              eh          epco2          efco2          eco2           ehco3          eco3   ", &
+        "      eOmegaA        eOmegaC   "
    DO i = 1,1
-     write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+     write (*,"(5x,8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+   END DO
+
+   write (*,*) " "
+   write (*,*) "Test 3: Default error on constants and Bt (specified as arguments) - ebt = 0.01"
+!  epK = (/0.004, 0.015, 0.03, 0.01, 0.01, 0.02, 0.02, 0.01/)
+   call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
+             temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epKstd, ebt=ebt )
+   write (*,*) "              eh          epco2          efco2          eco2           ehco3          eco3   ", &
+        "      eOmegaA        eOmegaC   "
+   DO i = 1,1
+     write (*,"(5x,8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+   END DO
+
+   write (*,*) " "
+   write (*,*) "Test 4: Default error on constants but ebt=0.05"
+!  epK = (/0.004, 0.015, 0.03, 0.01, 0.01, 0.02, 0.02, 0.01/)
+   call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
+             temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf, epK=epKstd, ebt=0.05d0 )
+   write (*,*) "              eh          epco2          efco2          eco2           ehco3          eco3   ", &
+        "      eOmegaA        eOmegaC   "
+   DO i = 1,1
+     write (*,"(5x,8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+   END DO
+
+   write (*,*) " "
+   write (*,*) "Test 5: Default error on constants and Bt (not specified as arguments) - should give same results aas Test 3"
+!  epK = (/0.004, 0.015, 0.03, 0.01, 0.01, 0.02, 0.02, 0.01/)
+   call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
+             temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
+             optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf       )
+   write (*,*) "              eh          epco2          efco2          eco2           ehco3          eco3   ", &
+        "      eOmegaA        eOmegaC   "
+   DO i = 1,1
+     write (*,"(5x,8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
    END DO
 
    ! ----------------------------------------
-   ! Test 4: six records at increasing depth
+   ! Test 6: six records at increasing depth
    ! ----------------------------------------
     
    ! Simple input data (with CONCENTRATION units typical for DATA)
@@ -116,12 +153,13 @@ PROGRAM test_errors
              temp_e, sal_e, ALK_e, DIC_e, sil_e, phos_e,                       &
              optCON, optT, optP, optB=optB, optK1K2=optK1K2, optKf=optKf   )
 
-   write (*,*) "Test 4: six records at increasing depth"
-   write (*,*) "         eh      epco2        efco2        eco2         ehco3        eco3   ", &
-        "eOmegaA     eOmegaC   "
+   write (*,*) " "
+   write (*,*) "Test 6: six records - same input (Southern Ocean surface averages) except depth increase from 0 to 5000 m"
+   write (*,*) "depth         eh          epco2          efco2          eco2           ehco3          eco3   ", &
+        "      eOmegaA        eOmegaC   "
 
    DO i = 1,6
-     write (*,"(8ES15.6)")  eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
+     write (*,"(f5.0, 8ES15.6)")  depth(i), eh(i), epco2(i), efco2(i), eco2(i), ehco3(i), eco3(i), eOmegaA(i), eOmegaC(i)
    END DO
 
 

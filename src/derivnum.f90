@@ -45,7 +45,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !     derivar = 3-lowercase-character identifier of input variable with respect to which derivative is requested
   !               possibilities are 'alk', 'dic', 'pho', 'sil', 'tem', 'sal'
   !               and dissociation constants 'k0', 'k1', 'k2', 'kw', 'kb', 'ka', 'kc'
-  !               and total dissolved inorganic boron 'bt"
+  !               and total dissolved inorganic boron 'bt'
   !               The last two of the k's (constants) are the solubility products for Aragonite and Calcite
   !
   !     INPUT options:
