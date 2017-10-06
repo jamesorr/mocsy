@@ -1,5 +1,10 @@
 ChangeLog
 
+version 2.3.4, 2017-10-06
+-----------------------------------
+	- added option to allow use of TEOS-10 std (conservative T, absolute S); old EOS-80 std remains the default
+	- moved ebt (Bt error) from the epK input vector to a separate input argument
+
 version 2.3.3, 2016-12-20
 -----------------------------------
 	- changed 'intent(OUT)' to 'intent(IN) to some variables in 2 subroutines in gasx.f90
