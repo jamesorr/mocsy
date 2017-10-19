@@ -171,8 +171,8 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 ! Local variables
 
   ! Default value for errors on pK
-! REAL(kind=rx), DIMENSION(8) :: epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8, 0.01_r8/)
-  REAL(kind=rx), DIMENSION(7) :: epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+! REAL(kind=rx), DIMENSION(7) :: epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  REAL(kind=rx), DIMENSION(7) :: epKstd, epK_local
 ! Extend epK_local by 1 to later include error for Bt (simplifies coding)
   REAL(kind=rx), DIMENSION(8) :: epK_local8
   CHARACTER*3, DIMENSION(8) ::  Kid = (/'k0 ','k1 ','k2 ','kb ','kw ','ka ','kc ', 'bt '/)
@@ -273,12 +273,17 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 
   ! Overwrite default value 'epK' if epK is given
   IF (PRESENT(epK)) THEN
-      epK_local(:) = epK(:)
+     epK_local(:) = epK(:)
+  ELSE
+     epKstd = (/0.004_rx, 0.015_rx, 0.03_rx, 0.01_rx, 0.01_rx, 0.02_rx, 0.02_rx/)
+     epK_local = epKstd
   ENDIF
 
   ! Overwrite default value 'ebt' if ebt is given
   IF (PRESENT(ebt)) THEN
-      ebt_local = ebt
+     ebt_local = ebt
+  ELSE
+     ebt_local = 0.01_rx
   ENDIF
 
   ! Overwrite default value of 'r' if r is given
@@ -587,7 +592,6 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   epK_local8(8)   = ebt_local
   
   ! Preliminary calculations for dissociation constants and total boron
-! IF (any (epK_local .NE. 0) .OR. ebt .NE. 0) THEN
   IF (any (epK_local8 .NE. 0) ) THEN
   
       ! Get all equilibrium constants and total concentrations of SO4, F, B
