@@ -13,8 +13,8 @@
 
 # set to  2 if you wish results in DOUBLE precision
 # set to 1 or 0 if SINGLE
-#PRECISION = 2
-PRECISION = 1
+PRECISION = 2
+#PRECISION = 1
 
 # mapping between Fortran and C types
 ifeq (${PRECISION}, 2)
@@ -73,8 +73,8 @@ GSW_TOOL_OBJS := $(GSW_TOOL_SRCS:.f90=.o)
 #FC = xlf
 #FC = f95
 #F90 = f95
-FC = gfortran
-F90 = gfortran
+FC = gfortran -ffree-line-length-none
+F90 = gfortran -ffree-line-length-none
 #FC = ifort
 #F90 = ifort
 
