@@ -277,6 +277,11 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
 ! They will be used to compute an absolute perturbation value on these constants
   REAL,PARAMETER :: K_values(7) = (/0.034, 1.2e-06, 8.3e-10, 2.1e-09, 6.1e-14, 6.7e-07, 4.3e-07/)
 
+! Multiplicative conversion factor to convert from umol/kg to optCON units (mol/kg or mol/m3)
+  REAL(kind=rx) :: xfac
+  
+! Reference value (typically global surface means, for calculating consistent absolute derivatives)
+  REAL(kind=rx) :: ref_value
   
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -397,7 +402,14 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                         optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon            )
 
     ELSE    ! we do NOT derive w/ respect to one of the  Ks
-    
+
+        ! Simple conversion factors
+       IF (optCON .EQ. 'mol/kg') THEN
+          xfac = 1.d-6    !Factor to convert umol/kg to mol/kg
+       ELSE
+          xfac = 1.025d-3 !Factor to convert umol/kg to mol/m3
+       ENDIF
+       
         ! Select input value to vary slightly
         ! values for individual rel_delta_x determined by minimizing difference
         ! between numerical derivatives and mocsy-dnad automatic derivatives
@@ -405,30 +417,37 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
         SELECT CASE (var_index)
             CASE (1)
                 input_value = alk(i)
+                ref_value = 2300.0d0 * xfac ! global surface mean in optCON units
                 rel_delta_x = 1.0d-6
             CASE (2)
                 input_value = dic(i)
+                ref_value = 2000.0d0 * xfac     ! global surface mean in optCON units
                 rel_delta_x = 1.0d-6
             CASE (3)
                 input_value = phos(i)
+                ref_value = 0.5d0 * xfac   ! global surface mean (Orr et al., 2017) in optCON units
                 rel_delta_x = 1.0d-3
             CASE (4)
                 input_value = sil(i)
+                ref_value = 7.5d0 * xfac   ! global surface mean (Orr et al., 2017) in optCON units
                 rel_delta_x = 1.0d-3
             CASE (5)
                 input_value = temp(i)
+                ref_value = 18.0d0 ! global surface mean (C)
                 rel_delta_x = 1.0d-4
             CASE (6)
                 input_value = sal(i)
+                ref_value = 35.0d0 ! global surface mean (C)
                 rel_delta_x = 1.0d-4
             CASE (8)
                 ! For Bt (propotional to salinity)    
-                input_value = 0.0002414d0 * (sal(i) / 1.80655d0) / 10.811d0
+                input_value = 0.0002414d0 * (sal(i)  / 1.80655d0) / 10.811d0
+                ref_value   = 0.0002414d0 * (35.0d0 / 1.80655d0) / 10.811d0
                 rel_delta_x = 1.0d-3
         END SELECT
 
         ! Determine two slightly different values of selected input value
-        abs_delta = input_value * rel_delta_x
+        abs_delta  = ref_value * rel_delta_x
         ainput1(1) = input_value - abs_delta
         ainput2(1) = input_value + abs_delta
         ! Compute total absolue delta
@@ -511,8 +530,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
     h(1,1) = 10**(-ph(1,1))
     h(1,2) = 10**(-ph(1,2))
     
-    ! Compute derivatives by method of centered difference
-
+    ! Compute derivatives (centered differences)
     dh_dx(i)      = (h(1,2)    - h(1,1))    / dx
     dpco2_dx(i)   = (pco2(1,2) - pco2(1,1)) / dx
     dfco2_dx(i)   = (fco2(1,2) - fco2(1,1)) / dx
