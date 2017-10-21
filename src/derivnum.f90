@@ -459,25 +459,25 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, ainput1, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon, verbose=.false. ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, ainput2, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon               ) 
             CASE (2)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, ainput1, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon, verbose=.false. ) 
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, ainput2, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon               )
             CASE (3)
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, asil, ainput1, aPatm, adepth, alat, 1,       &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon, verbose=.false. )
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, asil, ainput2, aPatm, adepth, alat, 1,       &
@@ -486,7 +486,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, ainput1, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon, verbose=.false. )
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, asal, aalk, adic, ainput2, aphos, aPatm, adepth, alat, 1,      &
@@ -495,7 +495,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 ainput1, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon, verbose=.false. )
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 ainput2, asal, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,       &
@@ -504,7 +504,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
                 call vars(ph(:,1), pco2(:,1), fco2(:,1), co2(:,1), hco3(:,1), co3(:,1),               &
                                 OmegaA(:,1), OmegaC(:,1), BetaD, rhoSW, p, tempis,                    &
                                 atemp, ainput1, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &
-                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon             ) 
+                                optCON, optT, optP, opB, opK1K2, opKf, opGAS, optS, lon, verbose=.false. )
                 call vars(ph(:,2), pco2(:,2), fco2(:,2), co2(:,2), hco3(:,2), co3(:,2),               &
                                 OmegaA(:,2), OmegaC(:,2), BetaD, rhoSW, p, tempis,                    &
                                 atemp, ainput2, aalk, adic, asil, aphos, aPatm, adepth, alat, 1,      &

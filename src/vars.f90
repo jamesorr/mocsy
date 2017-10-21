@@ -10,7 +10,7 @@ CONTAINS
 !!    silica and phosphate concentrations (all 1-D arrays)
 SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon               )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, verbose    )
 
   !   Purpose:
   !     Computes other standard carbonate system variables (pH, CO2*, HCO3- and CO32-, OmegaA, OmegaC, R)
@@ -114,7 +114,9 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !        mid equatorial Atlantic. Note that this implies an error on computed practical salinity up to 0.02 psu.
   !        In that case, do pass parameter 'lon' and set each of its elements to 1.e20.
   !     ---------
-
+  !     verbose: turn on or off the print statements  (.true. or .false ; default is .true.)
+  !     ----------
+  !
   !     OUTPUT variables:
   !     =================
   !     ph   = pH on total scale
@@ -196,10 +198,14 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(*), OPTIONAL, INTENT(in) :: optGAS
   !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
-!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
-  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+!f2py character(4) optional, intent(in) :: optS
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+! CHARACTER(*), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+  !> to print warnings when input out of bounds, use .true.; for no warnings, use .false.
+!f2py logical optional, intent(in) :: verbose
+  LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -235,7 +241,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   ! Call the subroutine that actually computes
   call vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                         &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac          )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac, verbose   )
                 
 END SUBROUTINE vars
 
@@ -246,8 +252,8 @@ END SUBROUTINE vars
 !!    is used by those internal calling routines.
 !!
 SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
-                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac      )
+                temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                             &
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac, verbose    )
 
   USE msingledouble
   USE mconstants
@@ -315,6 +321,8 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
   CHARACTER(*), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py logical optional, intent(in) :: verbose
+  LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -382,7 +390,7 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
   CHARACTER(4) :: opS
-
+  LOGICAL      :: verbosity
 
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -424,6 +432,11 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
     opS = optS
   ELSE
     opS = 'Sprc'
+  ENDIF
+  IF (PRESENT(verbose)) THEN
+    verbosity = verbose
+  ELSE
+    verbosity = .true.
   ENDIF
 
   icount = 0
@@ -499,18 +512,20 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
 !    ================================================================
      IF (dic(i) > 0. .AND. dic(i) < 1.0e+4) THEN
 !       Test to indicate if any of input variables are unreasonable
-        IF (       sal(i) < 0.0_rx  &
-             .OR.  alk(i) < 0.0_rx  &
-             .OR.  dic(i) < 0.0_rx  &
-             .OR.  sil(i) < 0.0_rx  &
-             .OR. phos(i) < 0.0_rx  &
-             .OR.  sal(i) > 1e+3_rx &
-             .OR.  alk(i) > 1e+3_rx &
-             .OR.  dic(i) > 1e+3_rx &
-             .OR.  sil(i) > 1e+3_rx &
-             .OR. phos(i) > 1e+3_rx) THEN
-           PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
-                     i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
+        IF (verbosity .EQV. .true.) THEN
+            IF (       sal(i) < 0.0_rx  &
+                 .OR.  alk(i) < 0.0_rx  &
+                 .OR.  dic(i) < 0.0_rx  &
+                 .OR.  sil(i) < 0.0_rx  &
+                 .OR. phos(i) < 0.0_rx  &
+                 .OR.  sal(i) > 1e+3_rx &
+                 .OR.  alk(i) > 1e+3_rx &
+                 .OR.  dic(i) > 1e+3_rx &
+                 .OR.  sil(i) > 1e+3_rx &
+                 .OR. phos(i) > 1e+3_rx) THEN
+               PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
+                         i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
+            ENDIF
         ENDIF
 !       Zero out any negative salinity, phosphate, silica, dic, and alk
         IF (sal(i) < 0.0_rx) THEN
@@ -697,7 +712,7 @@ END SUBROUTINE vars_sprac
 SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,        &
                 var_index, abs_delta,                                       &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, verbose )
 
   !   Purpose:
   !     
@@ -797,6 +812,8 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
   CHARACTER(*), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py logical optional, intent(in) :: verbose
+  LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
 ! Output variables:
   !> pH on the <b>total scale</b>
@@ -856,6 +873,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
   CHARACTER(3) :: opK1K2
   CHARACTER(7) :: opGAS
   CHARACTER(4) :: opS
+  LOGICAL      :: verbosity
 
 ! Set defaults for optional arguments (in Fortran 90)
 ! Note:  Optional arguments with f2py (python) are set above with 
@@ -897,6 +915,11 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
     opS = optS
   ELSE
     opS = 'Sprc'
+  ENDIF
+  IF (PRESENT(verbose)) THEN
+    verbosity = verbose
+  ELSE
+    verbosity = .true.
   ENDIF
 
   icount = 0
@@ -971,18 +994,20 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
 !    ================================================================
      IF (dic(i) > 0. .AND. dic(i) < 1.0e+4) THEN
 !       Test to indicate if any of input variables are unreasonable
-        IF (       sal(i) < 0.   &
-             .OR.  alk(i) < 0.   &
-             .OR.  dic(i) < 0.   &
-             .OR.  sil(i) < 0.   &
-             .OR. phos(i) < 0.   &
-             .OR.  sal(i) > 1e+3 &
-             .OR.  alk(i) > 1e+3 &
-             .OR.  dic(i) > 1e+3 &
-             .OR.  sil(i) > 1e+3 &
-             .OR. phos(i) > 1e+3) THEN
-           PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
-                     i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
+        IF (verbosity .EQV. .true.) THEN
+            IF (       sal(i) < 0.   &
+                 .OR.  alk(i) < 0.   &
+                 .OR.  dic(i) < 0.   &
+                 .OR.  sil(i) < 0.   &
+                 .OR. phos(i) < 0.   &
+                 .OR.  sal(i) > 1e+3 &
+                 .OR.  alk(i) > 1e+3 &
+                 .OR.  dic(i) > 1e+3 &
+                 .OR.  sil(i) > 1e+3 &
+                 .OR. phos(i) > 1e+3) THEN
+               PRINT *, 'i, icount, tempot, sal,    alk,    dic,    sil,    phos =', &
+                         i, icount, tempot, sal(i), alk(i), dic(i), sil(i), phos(i)
+            ENDIF
         ENDIF
 !       Zero out any negative salinity, phosphate, silica, dic, and alk
         IF (sal(i) < 0.0) THEN
