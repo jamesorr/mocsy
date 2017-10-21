@@ -69,14 +69,14 @@ PROGRAM test_mocsy
 !> Simple input data (with CONCENTRATION units typical for DATA)
 !> (based on observed average surface concentrations from S. Ocean (south of 60°S)--GLODAP and WOA2009)
    DO i = 1,6
-     temp(i)   = 2.0            !Can be "Potential temperature" or "In situ temperature" (see optT below)
-     sal(i)    = 35.0           !Salinity (practical scale)
-     alk(i)    = 2295.*1.e-6      ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
-     dic(i)    = 2154.*1.e-6      ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
-     sil(i)    = 0.
-     phos(i)   = 0.
-     depth(i) = real(i-1) * 1000. ! Vary depth from 0 to 5000 db by 1000 db
-     Patm(i)   = 1.0            !Atmospheric pressure (atm)
+     temp(i)   = 2.0_rx            !Can be "Potential temperature" or "In situ temperature" (see optT below)
+     sal(i)    = 35.0_rx           !Salinity (practical scale)
+     alk(i)    = 2295._rx*1.e-6_rx      ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
+     dic(i)    = 2154._rx*1.e-6_rx      ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
+     sil(i)    = 0._rx
+     phos(i)   = 0._rx
+     depth(i) = real(i-1) * 1000._rx ! Vary depth from 0 to 5000 db by 1000 db
+     Patm(i)   = 1.0_rx            !Atmospheric pressure (atm)
      N = i
    END DO
 
@@ -96,8 +96,8 @@ PROGRAM test_mocsy
      gamma_DIC = pco2(i) / pco2_deriv(2,i)
      gamma_Alk = pco2(i) / pco2_deriv(1,i)
 
-     beta_DIC  = -1. / (LOG(10.) * ph_deriv(2,i))
-     beta_Alk  = -1. / (LOG(10.) * ph_deriv(1,i))
+     beta_DIC  = -1._rx / (LOG(10._rx) * ph_deriv(2,i))
+     beta_Alk  = -1._rx / (LOG(10._rx) * ph_deriv(1,i))
      
      ! Here, we use Omega of Aragonite (use of Calcite would have been equaly valid)
      omega_DIC = OmegaA(i) / OmegaA_deriv(2,i)
