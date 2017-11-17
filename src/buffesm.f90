@@ -187,8 +187,7 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
   !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
-!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
-  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
@@ -255,17 +254,67 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
   REAL(kind=r8) :: SegleCBW, SeglePt, SegleSit
   
   INTEGER :: i
+! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
+  CHARACTER(3) :: opB
+  CHARACTER(2) :: opKf
+  CHARACTER(3) :: opK1K2
+  CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
+  LOGICAL      :: verbosity
 
+! Set defaults for optional arguments (in Fortran 90)
+! Note:  Optional arguments with f2py (python) are set above with 
+!        the !f2py statements that precede each type declaraion
+  IF (PRESENT(optB)) THEN
+!   print *,"optB present:"
+!   print *,"optB = ", optB 
+    opB = optB
+  ELSE
+!   Default is Lee et al (2010) for total boron
+!   print *,"optB NOT present:"
+    opB = 'l10'
+!   print *,"opB = ", opB 
+  ENDIF
+  IF (PRESENT(optKf)) THEN
+!   print *,"optKf = ", optKf
+    opKf = optKf
+  ELSE
+!   print *,"optKf NOT present:"
+!   Default is Perez & Fraga (1987) for Kf
+    opKf = 'pf'
+!   print *,"opKf = ", opKf
+  ENDIF
+  IF (PRESENT(optK1K2)) THEN
+!   print *,"optK1K2 = ", optK1K2
+    opK1K2 = optK1K2
+  ELSE
+!   print *,"optK1K2 NOT present:"
+!   Default is Lueker et al. 2000) for K1 & K2
+    opK1K2 = 'l'
+!   print *,"opK1K2 = ", opK1K2
+  ENDIF
+  IF (PRESENT(optGAS)) THEN
+    opGAS = optGAS
+  ELSE
+    opGAS = 'Pinsitu'
+  ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
+  ENDIF
+
+  print *, 'Calling vars_sprac'
 !  Compute carbonate system variables from DIC, ALK, T, S, nutrients, etc
 !  -------------------------------------------------------------------------------------
   CALL vars_sprac(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                      &
-             optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon, salprac      )
-   
-  IF (optS .EQ. 'Sprc') THEN
+             optCON, optT, optP, opB, opK1K2, opKf, opGAS, opS, lon, salprac      )
+
+  IF (trim(opS) == 'Sprc') THEN
      salprac = sal
   ENDIF
-  
+
 ! Get equilibrium constants and total concentrations of SO4, F, B
 ! ------------------------------------------------------------------
   CALL constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,           &
@@ -273,7 +322,7 @@ SUBROUTINE buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,
                  St, Ft, Bt,                                       &
                  temp, salprac, Patm,                              &
                  depth, lat, N,                                    &
-                 optT, optP, optB, optK1K2, optKf, optGAS          )
+                 optT, optP, opB, opK1K2, opKf, opGAS, opS, lon    )
 
 !  Compute buffer factors
 !  ----------------------

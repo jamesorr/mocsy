@@ -981,6 +981,11 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   ELSE
     opGAS = 'Pinsitu'
   ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
+  ENDIF
 
   R = 83.14472_r8
 

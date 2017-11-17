@@ -8,21 +8,21 @@ PROGRAM test_buffesm
    
    IMPLICIT NONE
 
-
 !  For vars routine (called below)
 !  "vars" Output variables:g
    REAL(kind=rx), DIMENSION(100) :: ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis
 !  "vars" Input variables
    INTEGER :: N
+
    REAL(kind=rx), DIMENSION(100) :: temp, sal, alk, dic, sil, phos, Patm, depth, lat
    REAL(kind=rx), DIMENSION(100)::  gammaDIC, gammaAlk, betaDIC, betaAlk, omegaDIC, omegaAlk, Rf
+
 !  "vars" Input options
    CHARACTER(10) :: optCON, optT, optP, optB, optKf, optK1K2, optGAS
 !  CHARACTER(7) :: optGAS
 
 !  Local variables:
    INTEGER :: i
-
 
 !> Typical options for observations
    optCON  = 'mol/kg'  ! input concentrations are in MOL/KG
@@ -51,9 +51,9 @@ PROGRAM test_buffesm
              optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2,         &  ! OPTIONS
              optKf='dg', optGAS=optGAS)                                                          
 
-   call buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,                    &  ! OUTPUT
-             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                                 &  ! INPUT
-             optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2,             &  ! OPTIONS
+   call buffesm(gammaDIC, betaDIC, omegaDIC, gammaALK, betaALK, omegaALK, Rf,                 &  ! OUTPUT
+             temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,                             &  ! INPUT
+             optCON='mol/kg', optT='Tinsitu', optP='db', optB='l10', optK1K2=optK1K2,         &  ! OPTIONS
              optKf='dg', optGAS=optGAS)                                                              
 
 !  Print out results (typical for data: concentration units differ)
@@ -69,7 +69,6 @@ PROGRAM test_buffesm
   50 format(/)
   51 format(179('-'))
   52 format(106('-'))
-
 
  200 format('Typical DATA output',                                                                              / &
             179('-'),                                                                                                    / &

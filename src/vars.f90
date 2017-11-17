@@ -246,7 +246,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 END SUBROUTINE vars
 
 
-!>    This is the subroutine that does acutall the computations
+!>    This is the subroutine that does the actual computations
 !!    This subroutine is only called internaly (i.e. by other Mocsy subroutines)
 !!    Its output parameter "Practical Salinity", when Absolute Salinity is passed in.
 !!    is used by those internal calling routines.
