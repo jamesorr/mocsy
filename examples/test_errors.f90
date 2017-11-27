@@ -52,11 +52,11 @@ PROGRAM test_errors
     alk(1)    = 2300.d-6         ! Convert obs. S. Ocean ave surf ALK (umol/kg) to mocsy data units (mol/kg)
     dic(1)    = 2000.d-6         ! Convert obs. S. Ocean ave surf DIC (umol/kg) to mocsy data units (mol/kg)
 !
-    sil(1)    = 60.d-6           ! 60
-    phos(1)   = 2.d-6            !  2
+!   sil(1)    = 60.d-6           ! 60
+!   phos(0)   = 2.d-6            !  2
 !
-!   sil(1)    = 0.d0
-!   phos(1)   = 0.d0
+    sil(1)    = 0.d0
+    phos(1)   = 0.d0
 !
     depth(1)  = 0.d0
     Patm(1)   = 1.0d0            ! Atmospheric pressure (atm)
@@ -65,7 +65,7 @@ PROGRAM test_errors
 !  Compute output errors
 
 !  -----------------------------------------------------------------------------------------------------------------------------
-   write (*,*) "Test 1: NO error for constants nor for Bt"
+   write (*,*) "Test 1: NO error for constants nor for Bt (both specified)"
 !  -----------------------------------------------------------------------------------------------------------------------------
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,            &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,                &  ! INPUT
@@ -79,7 +79,7 @@ PROGRAM test_errors
    write (*,*) " "
 
 !  -----------------------------------------------------------------------------------------------------------------------------
-   write (*,*) "Test 2: Default error on constants but Bt=0"
+   write (*,*) "Test 2: Default error on constants but Bt=0 (both specified)"
 !  -----------------------------------------------------------------------------------------------------------------------------
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
@@ -93,7 +93,7 @@ PROGRAM test_errors
    write (*,*) " "
 
 !  -----------------------------------------------------------------------------------------------------------------------------
-   write (*,*) "Test 3: Default error on constants and Bt (specified as arguments) - ebt = 0.01"
+   write (*,*) "Test 3: Default error on constants and Bt (ebt = 0.01): both specified"
 !  -----------------------------------------------------------------------------------------------------------------------------
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
@@ -107,7 +107,7 @@ PROGRAM test_errors
    write (*,*) " "
 
 !  -----------------------------------------------------------------------------------------------------------------------------
-   write (*,*) "Test 4: Default error on constants but ebt=0.04"
+   write (*,*) "Test 4: Default error on constants but ebt=0.04 (both specified)"
 !  -----------------------------------------------------------------------------------------------------------------------------
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
@@ -121,7 +121,7 @@ PROGRAM test_errors
    write (*,*) " "
 
 !  -----------------------------------------------------------------------------------------------------------------------------
-   write (*,*) "Test 5: Default error on constants and Bt (not specified as arguments) - should give same results aas Test 3"
+   write (*,*) "Test 5: Default error on constants and Bt (neither specified) - should give same results as Test 3"
 !  -----------------------------------------------------------------------------------------------------------------------------
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT

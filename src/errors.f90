@@ -118,11 +118,14 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !> standard error (or uncertainty) on Phosphate total concentrations
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: ephos
   !> standard error (or uncertainty) on all seven dissociation constants (a vector)
-  REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(7) :: epK
+!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.004,0.015,0.03,0.01,0.01,0.02,0.02)
+  REAL(kind=rx), INTENT(in), OPTIONAL, DIMENSION(7) :: epK
   !> correlation coefficient (-1 < r < 1) for correlation between ALK and DIC (zero by default)
+!f2py  real intent(in), optional :: r = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in) :: r
   !> standard error (or uncertainty) on total boron (Bt) - a single number, not a vector like other errors
-  REAL(kind=rx), OPTIONAL, INTENT(in) :: ebt
+!f2py  real intent(in), optional :: ebt=0.01
+  REAL(kind=rx), OPTIONAL, INTENT(in) :: ebt 
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
@@ -137,12 +140,12 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !! generally increases total boron in seawater by 4% 
 !f2py character*3 optional, intent(in) :: optB='l10'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optB
-  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
-!f2py character*2 optional, intent(in) :: optKf='pf'
-  CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
 !f2py character*3 optional, intent(in) :: optK1K2='l'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
+  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
+!f2py character*2 optional, intent(in) :: optKf='pf'
+  CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
   !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
   !! 'Ppot'    - for 'potential' fCO2 and pCO2 (water parcel brought adiabatically to the surface)
   !! 'Pinsitu' - for 'in situ' values of fCO2 and pCO2, accounting for pressure on K0 and Cf
@@ -171,15 +174,18 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 ! Local variables
 
   ! Default value for errors on pK
-! REAL(kind=rx), DIMENSION(7) :: epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
-  REAL(kind=rx), DIMENSION(7) :: epKstd, epK_local
+  REAL(kind=rx), DIMENSION(7) :: epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  REAL(kind=rx), DIMENSION(7) :: epKstd = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  REAL(kind=rx), DIMENSION(7) :: epKzero
+! REAL(kind=rx), DIMENSION(7) :: epKstd
 ! Extend epK_local by 1 to later include error for Bt (simplifies coding)
   REAL(kind=rx), DIMENSION(8) :: epK_local8
   CHARACTER*3, DIMENSION(8) ::  Kid = (/'k0 ','k1 ','k2 ','kb ','kw ','ka ','kc ', 'bt '/)
 ! CHARACTER*3, DIMENSION(7) :: Kid = (/'k0 ','k1 ','k2 ','kb ','kw ','ka ','kc '/)
 
   ! Default value for error on Total Boron (ebt)
-  REAL(kind=rx) :: ebt_local = 0.01_r8
+  REAL(kind=rx) :: ebt_local = 0.01_rx
+! REAL(kind=rx) :: ebt_local 
 
   ! Default value for correlation between ALK & DIC
   REAL(kind=rx) :: r_local = 0.0_r8
@@ -231,66 +237,78 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   CHARACTER(7) :: opGAS
 
   INTEGER :: i
-  
+
 ! *******************************************************************
 
-! Set defaults for optional arguments (in Fortran 90)
+! Set defaults for optional arguments (in Fortran90)
 ! Note:  Optional arguments with f2py (python) are set above with 
 !        the !f2py statements that precede each type declaraion
-  IF (PRESENT(optB)) THEN
-!   print *,"optB present:"
-!   print *,"optB = ", optB 
-    opB = optB
-  ELSE
+
+  epKstd = (/0.004d0, 0.015d0, 0.03d0, 0.01d0, 0.01d0, 0.02d0, 0.02d0/)
+  epK_local(:) = epKstd(:)
+  epKzero = epKstd * 0.0
+
+!------------------------------------------------------------------------------------------------------
+! IMPORTANT: with F2PY (python), the result of "PRESENT()" is always .TRUE.
+!            Thus the .NOT. PRESENT blocks below are executed only when executed in FORTRAN, not python
+!            So for python interface, the same defaults are assigned with "!f2py" statements above
+! For FORTRAN execution only (with F2PY, "PRESENT()" is always .TRUE.)
+  IF (.NOT. PRESENT(optB)) THEN
 !   Default is Lee et al (2010) for total boron
-!   print *,"optB NOT present:"
-    opB = 'l10'
-!   print *,"opB = ", opB 
-  ENDIF
-  IF (PRESENT(optKf)) THEN
-!   print *,"optKf = ", optKf
-    opKf = optKf
+     opB = 'l10'
   ELSE
-!   print *,"optKf NOT present:"
-!   Default is Perez & Fraga (1987) for Kf
-    opKf = 'pf'
-!   print *,"opKf = ", opKf
+     opB = optB
   ENDIF
-  IF (PRESENT(optK1K2)) THEN
-!   print *,"optK1K2 = ", optK1K2
-    opK1K2 = optK1K2
-  ELSE
-!   print *,"optK1K2 NOT present:"
+  
+  IF (.NOT. PRESENT(optK1K2)) THEN
 !   Default is Lueker et al. 2000) for K1 & K2
     opK1K2 = 'l'
-!   print *,"opK1K2 = ", opK1K2
-  ENDIF
-  IF (PRESENT(optGAS)) THEN
-    opGAS = optGAS
   ELSE
+     opK1K2 = optK1K2
+  ENDIF
+  
+  IF (.NOT. PRESENT(optKf)) THEN
+!   Default is Perez & Fraga (1987) for Kf
+    opKf = 'pf'
+  ELSE
+     opKf = optKf
+  ENDIF
+  
+  IF (.NOT. PRESENT(optGAS)) THEN
     opGAS = 'Pinsitu'
-  ENDIF
-
-  ! Overwrite default value 'epK' if epK is given
-  IF (PRESENT(epK)) THEN
-     epK_local(:) = epK(:)
   ELSE
-     epKstd = (/0.004_rx, 0.015_rx, 0.03_rx, 0.01_rx, 0.01_rx, 0.02_rx, 0.02_rx/)
-     epK_local = epKstd
+     opGAS = optGAS
   ENDIF
-
-  ! Overwrite default value 'ebt' if ebt is given
-  IF (PRESENT(ebt)) THEN
-     ebt_local = ebt
+  
+  IF (.NOT. PRESENT(r)) THEN
+     r_local = 0.0_r8
   ELSE
-     ebt_local = 0.01_rx
-  ENDIF
-
-  ! Overwrite default value of 'r' if r is given
-  IF (PRESENT(r)) THEN
      r_local = r
   ENDIF
-
+  
+  IF (.NOT. PRESENT(epK)) THEN
+     epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  ELSE
+     epK_local(:) = epK(:)
+     ! Kludge: when used in python, the init. of epK fails
+     ! i.e;, all 7 epK members are equal to last specified element on !f2py statement)
+     IF (epK(1)==epK(7) .and. epK(2)==epK(7) .and. epK(3)==epK(7) .AND. &
+         epK(4)==epK(7) .and. epK(5)==epK(7) .and. epK(6)==epK(7)) THEN
+         ! if so, initialize to the default
+         epK_local = epKstd
+         IF (epK(1)==0.0) THEN
+            epK_local = epKzero
+         ENDIF
+     ENDIF
+  ENDIF
+  
+  IF (.NOT. PRESENT(ebt)) THEN
+     print *, 'ebt arg not PRESENT'
+     ebt_local = 0.01_rx
+  ELSE
+     ebt_local = ebt
+  ENDIF
+  
   ! initialise total square error
   eH(:) = 0
   epCO2(:) = 0
@@ -301,7 +319,6 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   eOmegaA(:) = 0
   eOmegaC(:) = 0
     
-        
   ! Contribution of Alk to squared standard error
   ! ---------------------------------------------
   
