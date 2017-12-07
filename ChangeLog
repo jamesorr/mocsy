@@ -1,5 +1,12 @@
 ChangeLog
 
+version 2.3.7, 2017-12-08
+-----------------------------------
+	- cleaned PRESENT clauses & set some f2py defaults
+	- fixed PRESENT clauses (not recognized by f2py)
+	- buffesm - fixed inconsistencies in optional args
+	- created notebooks dir, with 3 .ipynb files from Emilio Mayorga
+
 version 2.3.6, 2017-10-21
 -----------------------------------
 	- postpended precision indicator "_rx" to input data in test_mocsy.f90
