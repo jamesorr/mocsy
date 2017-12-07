@@ -183,7 +183,7 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-!f2py character*3 optional, intent(in) :: optB='l10'
+!f2py character*3 optional, intent(in) :: optB='u74'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optB
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
 !f2py character*2 optional, intent(in) :: optKf='pf'
@@ -198,11 +198,13 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
   !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
-!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
-  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+!f2py character*4 optional, intent(in) :: optS='Sprc'
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
+!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
   !> latitude <b>[degrees north]</b>
+!f2py real(8) optional, intent(in), dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
 
 ! Output variables:
@@ -288,8 +290,8 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
   IF (PRESENT(optB)) THEN
     opB = optB
   ELSE
-!   Default is Lee et al (2010) for total boron
-    opB = 'l10'
+!   Default is Uppstrom (1974) for total boron
+    opB = 'u74'
   ENDIF
   IF (PRESENT(optKf)) THEN
     opKf = optKf

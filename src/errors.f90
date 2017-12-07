@@ -12,7 +12,8 @@ CONTAINS
 SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
                 temp, sal, alk, dic, sil, phos, Patm, depth, lat, N,          &
                 etemp, esal, ealk, edic, esil, ephos,                         &
-                optCON, optT, optP, optB, optK1K2, optKf, optGAS, r, epK, ebt )
+                optCON, optT, optP, optB, optK1K2, optKf, optGAS, optS, lon,  & 
+                r, epK, ebt )
          
 !     This subroutine does error propagation on the computation of carbonate system variables 
 !     from errors (or uncertainties) on six input 
@@ -52,7 +53,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 !     INPUT options:
 !     ==============
 !    
-!     - optCON, optT, optP, opB, opK1K2, opKf, opGAS :  same as for input of subroutine vars() 
+!     - optCON, optT, optP, opB, optK1K2, optKf, optGAS, optS, lon :  same as for input of subroutine vars() 
 !    
 !    
 !     OUTPUT variables:
@@ -138,7 +139,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-!f2py character*3 optional, intent(in) :: optB='l10'
+!f2py character*3 optional, intent(in) :: optB='u74'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optB
   !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
 !f2py character*3 optional, intent(in) :: optK1K2='l'
@@ -152,6 +153,11 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
+!f2py character*7 optional, intent(in) :: optS='Sprc'
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
+  !> longitude <b>[degrees east]</b>
+!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
 
 ! Output variables:
   !> total error to [H+] concentration  (mol/kg) on the <b>total scale</b>
@@ -232,9 +238,10 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
-  CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
+  CHARACTER(2) :: opKf
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
 
   INTEGER :: i
 
@@ -248,65 +255,69 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   epK_local(:) = epKstd(:)
   epKzero = epKstd * 0.0
 
-!------------------------------------------------------------------------------------------------------
-! IMPORTANT: with F2PY (python), the result of "PRESENT()" is always .TRUE.
-!            Thus the .NOT. PRESENT blocks below are executed only when executed in FORTRAN, not python
-!            So for python interface, the same defaults are assigned with "!f2py" statements above
-! For FORTRAN execution only (with F2PY, "PRESENT()" is always .TRUE.)
-  IF (.NOT. PRESENT(optB)) THEN
-!   Default is Lee et al (2010) for total boron
-     opB = 'l10'
-  ELSE
+  !------------------------------------------------------------------------------------------------------
+  ! IMPORTANT: in python (after f2py), the result of "PRESENT()" clause below is always .TRUE.
+  !            Thus the corresponding ELSE blocks below are executed only when in pure FORTRAN;
+  !            They are not reached in a python call of the same fortran routines. Thus
+  !            for f2py, the same defaults are assigned with "!f2py" statements above
+  IF (PRESENT(optB)) THEN
      opB = optB
-  ENDIF
-  
-  IF (.NOT. PRESENT(optK1K2)) THEN
-!   Default is Lueker et al. 2000) for K1 & K2
-    opK1K2 = 'l'
   ELSE
+!   Default is Uppstrom (1974) for total boron
+     opB = 'u74'
+  ENDIF
+  IF (PRESENT(optK1K2)) THEN
      opK1K2 = optK1K2
-  ENDIF
-  
-  IF (.NOT. PRESENT(optKf)) THEN
-!   Default is Perez & Fraga (1987) for Kf
-    opKf = 'pf'
   ELSE
+!    Default is Lueker et al. 2000) for K1 & K2
+     opK1K2 = 'l'
+  ENDIF
+  IF (PRESENT(optKf)) THEN
      opKf = optKf
-  ENDIF
-  
-  IF (.NOT. PRESENT(optGAS)) THEN
-    opGAS = 'Pinsitu'
   ELSE
+!    Default is Perez & Fraga (1987) for Kf
+     opKf = 'pf'
+  ENDIF
+  IF (PRESENT(optGAS)) THEN
      opGAS = optGAS
-  ENDIF
-  
-  IF (.NOT. PRESENT(r)) THEN
-     r_local = 0.0_r8
   ELSE
+     opGAS = 'Pinsitu'
+  ENDIF
+  IF (.NOT. PRESENT(optS)) THEN
+     opS = optS
+  ELSE
+     opS = 'Sprc'
+  ENDIF
+! IF (PRESENT(lon)) THEN
+!    lon_local = lon
+! ELSE
+!    lon_local = 1.e20
+! ENDIF
+  IF (PRESENT(r)) THEN
      r_local = r
-  ENDIF
-  
-  IF (.NOT. PRESENT(epK)) THEN
-     epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
   ELSE
+     r_local = 0.0_r8
+  ENDIF
+  IF (PRESENT(epK)) THEN
      epK_local(:) = epK(:)
-     ! Kludge: when used in python, the init. of epK fails
+     ! Kludge: when used in python, the init. of epK fails (does not work with an array)
      ! i.e;, all 7 epK members are equal to last specified element on !f2py statement)
      IF (epK(1)==epK(7) .and. epK(2)==epK(7) .and. epK(3)==epK(7) .AND. &
-         epK(4)==epK(7) .and. epK(5)==epK(7) .and. epK(6)==epK(7)) THEN
+         epK(4)==epK(7) .and. epK(5)==epK(7) .and. epK(6)==epK(7)         ) THEN
          ! if so, initialize to the default
-         epK_local = epKstd
          IF (epK(1)==0.0) THEN
             epK_local = epKzero
+         ELSE
+            epK_local = epKstd
          ENDIF
      ENDIF
-  ENDIF
-  
-  IF (.NOT. PRESENT(ebt)) THEN
-     print *, 'ebt arg not PRESENT'
-     ebt_local = 0.01_rx
   ELSE
+     epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  ENDIF
+  IF (PRESENT(ebt)) THEN
      ebt_local = ebt
+  ELSE
+     ebt_local = 0.01_rx
   ENDIF
   
   ! initialise total square error

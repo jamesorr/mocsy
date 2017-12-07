@@ -67,22 +67,23 @@ USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       SA: Absolute Salinity (g/kg)
+  !>  SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: SA
-!       TA: Total Alkalinity, in mol/kg 
+  !>  TA: Total Alkalinity, in mol/kg 
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: TA
-!      DIC: Dissolved Inorganic Carbone concentration in mol/kg
+  !> DIC: Dissolved Inorganic Carbone concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: DIC
-!      NO3: Total Nitrate concentration in mol/kg
+  !> NO3: Total Nitrate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: NO3
-!    SIOH4: Total Silicate concentration in mol/kg
+  !> SIOH4: Total Silicate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SIOH4
 
 ! Output variables:
-!       SP: Practical Salinity on the practical salinity scale
+  !>  SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(out),    DIMENSION(N) :: SP
 
   
@@ -112,7 +113,7 @@ IMPLICIT NONE
   
 END SUBROUTINE
 
-SUBROUTINE sa2sp_geo(SA, N, SP, P, long, lat)
+SUBROUTINE sa2sp_geo(SA, N, SP, P, lon, lat)
 ! sa2sp_geo:         From Absolute to Practical Salinity
 ! 
 ! Description:
@@ -123,8 +124,8 @@ SUBROUTINE sa2sp_geo(SA, N, SP, P, long, lat)
 !       SA: Absolute Salinity in g/kg
 !        N: Size of input and output 1D arrays
 !        P: Sea water pressure in dbar (optional, default = 0)
-!     long: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!      lat: latitude, optional, in decimal degrees [-90 ... 90]
+!      lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!      lat: Latitude, optional, in decimal degrees [-90 ... 90]
 ! 
 ! Details:
 !      This subroutine is almost an alias of subroutine gsw_sp_from_sa
@@ -166,47 +167,50 @@ USE gsw_mod_toolbox, only: gsw_sp_from_sa, gsw_sa_from_sp, gsw_ct_from_t, gsw_t_
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       SA: Absolute Salinity (g/kg)
+  !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: SA
-!        P: Sea water pressure in dbar (optional, default = 0)
+  !> P: Sea water pressure in dbar (optional, default = 0)
+!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
-!     long: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: long
-!      lat: latitude, optional, in decimal degrees [-90 ... 90]
+  !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+  !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
+!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
 
 ! Output variables:
-!       SP: Practical Salinity on the practical salinity scale
+  !> SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(out),    DIMENSION(N) :: SP
 
-
   ! Default latitude and longitude
-  REAL(kind=r8) :: def_lat, def_long
+  REAL(kind=r8) :: def_lat, def_lon
   INTEGER :: i
-  
-  IF (PRESENT(lat) .AND. PRESENT(long)) THEN
+
+  IF (PRESENT(lat) .AND. PRESENT(lon)) THEN
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)),DBLE(P(i)),DBLE(long(i)),DBLE(lat(i))))
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)),DBLE(P(i)),DBLE(lon(i)),DBLE(lat(i))))
         ENDDO
      ELSE
         DO i = 1, N
-           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), 0.0d0, DBLE(long(i)),DBLE(lat(i))))
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), 0.0d0, DBLE(lon(i)),DBLE(lat(i))))
         ENDDO
      ENDIF
   ELSE
-     def_lat = 0
-     def_long = -25
+     def_lat = 0.0
+     def_lon = -25
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), DBLE(P(i)), def_long, def_lat))
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), DBLE(P(i)), def_lon, def_lat))
         ENDDO
      ELSE
         DO i = 1, N
-           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), 0.0d0, def_long, def_lat))
+           SP(i) = SGLE(gsw_sp_from_sa(DBLE(SA(i)), 0.0d0, def_lon, def_lat))
         ENDDO
      ENDIF
   ENDIF
@@ -269,22 +273,23 @@ USE msingledouble
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       SP: Practical Salinity on the practical salinity scale
+  !>  SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SP
-!       TA: Total Alkalinity, in mol/kg 
+  !>  TA: Total Alkalinity, in mol/kg 
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: TA
-!      DIC: Dissolved Inorganic Carbone concentration in mol/kg
+  !> DIC: Dissolved Inorganic Carbone concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: DIC
-!      NO3: Total Nitrate concentration in mol/kg
+  !> NO3: Total Nitrate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: NO3
-!    SIOH4: Total Silicate concentration in mol/kg
+  !> SIOH4: Total Silicate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SIOH4
 
 ! Output variables:
-!       SA: Absolute Salinity (g/kg)
+  !>  SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: SA
 
   REAL(kind=r8) :: DIC_stdsw, TA_stdsw
@@ -310,7 +315,7 @@ IMPLICIT NONE
 
 END SUBROUTINE
 
-SUBROUTINE sp2sa_geo(SP, N, SA, P, long, lat)
+SUBROUTINE sp2sa_geo(SP, N, SA, P, lon, lat)
 ! sp2sa_geo:         From Practical to Absolute Salinity
 ! 
 ! Description:
@@ -320,8 +325,8 @@ SUBROUTINE sp2sa_geo(SP, N, SA, P, long, lat)
 ! Input:
 !       SP: Practical Salinity on the practical salinity scale
 !        P: Sea water pressure in dbar, optional, default = 0
-!     long: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!      lat: latitude, optional, in decimal degrees [-90 ... 90]
+!      lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!      lat: Latitude, optional, in decimal degrees [-90 ... 90]
 ! 
 ! Details:
 !      This subroutine is almost an alias of subroutine gsw_sa_from_sp of
@@ -362,47 +367,51 @@ USE msingledouble
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       SP: Practical Salinity on the practical salinity scale
+  !> SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SP
-!        P: Sea water pressure in dbar (optional, default = 0)
+  !> P: Sea water pressure in dbar (optional, default = 0)
+!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
-!     long: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: long
-!      lat: latitude, optional, in decimal degrees [-90 ... 90]
+  !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+  !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
+!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
 
 ! Output variables:
-!       SA: Absolute Salinity (g/kg)
+  !>  SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: SA
 
 
   ! Default latitude and longitude
-  REAL(kind=r8) :: def_lat, def_long
+  REAL(kind=r8) :: def_lat, def_lon
   INTEGER :: i
 
-  IF (PRESENT(lat) .AND. PRESENT(long)) THEN
+  IF (PRESENT(lat) .AND. PRESENT(lon)) THEN
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), DBLE(P(i)), DBLE(long(i)), DBLE(lat(i))))
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), DBLE(P(i)), DBLE(lon(i)), DBLE(lat(i))))
         ENDDO
      ELSE
         DO i = 1, N
-           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), 0.0d0, DBLE(long(i)), DBLE(lat(i))))
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), 0.0d0, DBLE(lon(i)), DBLE(lat(i))))
         ENDDO
      ENDIF
   ELSE
      def_lat = 0
-     def_long = -25
+     def_lon = -25
      IF (PRESENT(P)) THEN
         DO i = 1, N
-           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), DBLE(P(i)), def_long, def_lat))
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), DBLE(P(i)), def_lon, def_lat))
         ENDDO
      ELSE
         DO i = 1, N
-           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), 0.0d0, def_long, def_lat))
+           SA(i) = SGLE(gsw_sa_from_sp(DBLE(SP(i)), 0.0d0, def_lon, def_lat))
         ENDDO
      ENDIF
   ENDIF 
@@ -471,28 +480,29 @@ USE msingledouble
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       CvT: Conservative Temperature (deg C)
+  !> CvT: Conservative Temperature (deg C)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: CvT
-!       SA: Absolute Salinity (g/kg)
+  !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: SA
-!        P: Sea water pressure in dbar
+  !>  P: Sea water pressure in dbar
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: P
-!       TA: Total Alkalinity, in mol/kg 
+  !> TA: Total Alkalinity, in mol/kg 
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: TA
-!      DIC: Dissolved Inorganic Carbone concentration in mol/kg
+  !> DIC: Dissolved Inorganic Carbone concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: DIC
-!      NO3: Total Nitrate concentration in mol/kg
+  !> NO3: Total Nitrate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: NO3
-!    SIOH4: Total Silicate concentration in mol/kg
+  !> SIOH4: Total Silicate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SIOH4
 
 ! Output variables:
-!       SP: Practical Salinity on the practical salinity scale
+  !> SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(out),    DIMENSION(N) :: SP
-!        T: in-situ temperature in deg. C
+  !>  T: in-situ temperature in deg. C
   REAL(kind=rx), INTENT(out),    DIMENSION(N) :: T
 
   INTEGER :: i
@@ -507,7 +517,7 @@ IMPLICIT NONE
 
 END SUBROUTINE
 
-SUBROUTINE teos2eos_geo(SA, CvT, P, N, T, SP, long, lat)
+SUBROUTINE teos2eos_geo(SA, CvT, P, N, T, SP, lon, lat)
 ! teos2eos_geo:       Convert temperature and salinity from TEOS-10 to EOS-80
 ! 
 ! Description:
@@ -519,8 +529,8 @@ SUBROUTINE teos2eos_geo(SA, CvT, P, N, T, SP, long, lat)
 !       SA: Absolute Salinity in g/kg
 !      CvT: Conservative Temperature in degrees C
 !        P: Sea water pressure in dbar
-!     long: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!      lat: latitude, optional, in decimal degrees [-90 ... 90]
+!      lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!      lat: Latitude, optional, in decimal degrees [-90 ... 90]
 ! 
 ! Details:
 !      Conversion from Absolute (SA) to Practical Salinity (SP) depends
@@ -561,24 +571,28 @@ USE msingledouble
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       CvT: Conservative Temperature (deg C)
+  !> CvT: Conservative Temperature (deg C)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: CvT
-!       SA: Absolute Salinity (g/kg)
+  !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: SA
-!        P: Sea water pressure in dbar
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: P
-!     long: Longitude in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: long
-!      lat: latitude in decimal degrees [-90 ... 90]
+  !> P: Sea water pressure in dbar (optional, default = 0)
+!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
+  !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+  !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
+!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
 
 ! Output variables:
-!       SP: Practical Salinity on the practical salinity scale
+  !> SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(out),    DIMENSION(N) :: SP
-!        T: in-situ temperature in deg. C
+  !>  T: in-situ temperature in deg. C
   REAL(kind=rx), INTENT(out),    DIMENSION(N) :: T
 
   INTEGER :: i
@@ -588,15 +602,15 @@ IMPLICIT NONE
      T(i) = SGLE(gsw_t_from_ct (DBLE(SA(i)), DBLE(CvT(i)), DBLE(P(i))))
   ENDDO
   ! convert salinity
-  IF (PRESENT(lat) .AND. PRESENT(long)) THEN
-     CALL sa2sp_geo(SA, N, SP, P, long, lat)
+  IF (PRESENT(lat) .AND. PRESENT(lon)) THEN
+     CALL sa2sp_geo(SA, N, SP, P, lon, lat)
   ELSE    
      CALL sa2sp_geo(SA, N, SP, P)
   ENDIF
   
 END SUBROUTINE
 
-SUBROUTINE eos2teos_geo(SP, T, P, N, CvT, SA, long, lat)
+SUBROUTINE eos2teos_geo(SP, T, P, N, CvT, SA, lon, lat)
 ! eos2teos_geo:        Convert temperature and salinity from EOS-80 to TEOS-10
 ! 
 ! Description:
@@ -608,8 +622,8 @@ SUBROUTINE eos2teos_geo(SP, T, P, N, CvT, SA, long, lat)
 !       SP: Practical Salinity on the practical salinity scale
 !        T: in-situ temperature in deg. C
 !        P: Sea water pressure in dbar
-!     long: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!      lat: latitude, optional, in decimal degrees [-90 ... 90]
+!      lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!      lat: Latitude, optional, in decimal degrees [-90 ... 90]
 !        N: Size of input and output 1D arrays
 ! 
 ! Details:
@@ -650,31 +664,35 @@ USE msingledouble
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       SP: Practical Salinity on the practical salinity scale
+  !> SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SP
-!        T: in-situ temperature in deg. C
+  !> T: in-situ temperature in deg. C
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: T
-!        P: Sea water pressure in dbar
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: P
-!     long: Longitude in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: long
-!      lat: latitude in decimal degrees [-90 ... 90]
+  !> P: Sea water pressure in dbar (optional, default = 0)
+!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
+  !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
+!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+  !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
+!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
 
 ! Output variables:
-!       CvT: Conservative Temperature (deg C)
+  !> CvT: Conservative Temperature (deg C)
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: CvT
-!       SA: Absolute Salinity (g/kg)
+  !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: SA
 
   INTEGER :: i
 
   ! convert salinity
-  IF (PRESENT(lat) .AND. PRESENT(long)) THEN
-     CALL sp2sa_geo(SP, N, SA, P, long, lat)
+  IF (PRESENT(lat) .AND. PRESENT(lon)) THEN
+     CALL sp2sa_geo(SP, N, SA, P, lon, lat)
   ELSE    
      CALL sp2sa_geo(SP, N, SA, P)
   ENDIF
@@ -751,28 +769,29 @@ USE msingledouble
 
 IMPLICIT NONE
 
-! Input variables
-!      number of records
+! Input variables:
+  !> N: number of records
+!f2py intent(hide) n
   INTEGER, INTENT(in) :: N
-!       SP: Practical Salinity on the practical salinity scale
+  !>  SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SP
-!        T: in-situ temperature in deg. C
+  !>   T: in-situ temperature in deg. C
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: T
-!        P: Sea water pressure in dbar
+  !>   P: Sea water pressure in dbar
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: P
-!       TA: Total Alkalinity, in mol/kg 
+  !>  TA: Total Alkalinity, in mol/kg 
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: TA
-!      DIC: Dissolved Inorganic Carbone concentration in mol/kg
+  !> DIC: Dissolved Inorganic Carbone concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: DIC
-!      NO3: Total Nitrate concentration in mol/kg
+  !> NO3: Total Nitrate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: NO3
-!    SIOH4: Total Silicate concentration in mol/kg
+  !> SIOH4: Total Silicate concentration in mol/kg
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SIOH4
 
 ! Output variables:
-!       CvT: Conservative Temperature (deg C)
+  !> CvT: Conservative Temperature (deg C)
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: CvT
-!       SA: Absolute Salinity (g/kg)
+  !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(out), DIMENSION(N) :: SA
 
   INTEGER :: i

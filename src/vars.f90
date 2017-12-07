@@ -26,7 +26,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !     depth   = depth [m]     (with optP='m', i.e., for a z-coordinate model vertical grid is depth, not pressure)
   !             = pressure [db] (with optP='db')
   !     lat     = latitude [degrees] (needed to convert depth to pressure, i.e., when optP='m')
-  !             = may also be used to convert absolute to practical salinity, when optS='Sabs' 
+  !             = also be used to convert absolute to practical salinity, when optS='Sabs' 
   !             = dummy array (unused when optP='db' and optS='Sprc')
   !     temp    = potential temperature [degrees C] (with optT='Tpot', i.e., models carry tempot, not in situ temp)
   !             = in situ   temperature [degrees C] (with optT='Tinsitu', e.g., for data)
@@ -148,7 +148,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   IMPLICIT NONE
 
 ! Input variables
-  !>     number of records
+  !> N: number of records
 !f2py intent(hide) n
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
@@ -167,9 +167,9 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !> atmospheric pressure <b>[atm]</b>
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
   !> depth in \b meters (when optP='m') or \b decibars (when optP='db')
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: depth
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: depth
   !> latitude <b>[degrees north]</b>
-  REAL(kind=rx), INTENT(in),    DIMENSION(N) :: lat
+  REAL(kind=rx), INTENT(in), DIMENSION(N) :: lat
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
   !! concentration units for input (for alk, dic, sil, phos) & output (co2, hco3, co3)
@@ -179,7 +179,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   CHARACTER(7), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
   CHARACTER(2), INTENT(in) :: optP
-  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
+  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) [default] or \b 'l10' (Lee et al., 2010).
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
@@ -188,7 +188,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
 !f2py character*2 optional, intent(in) :: optKf='pf'
   CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
-  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
+  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) [default] or \b 'm10' (Millero, 2010) 
 !f2py character*3 optional, intent(in) :: optK1K2='l'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
   !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
@@ -197,14 +197,14 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(*), OPTIONAL, INTENT(in) :: optGAS
-  !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
-!f2py character(4) optional, intent(in) :: optS
+  !> choose \b 'Sprc' for practical sal. (EOS-80, default) [default] or \b 'Sabs' for absolute salinity (TEOS-10)
+!f2py character(4) optional, intent(in) :: optS = 'Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
-! CHARACTER(*), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+  REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
   !> to print warnings when input out of bounds, use .true.; for no warnings, use .false.
-!f2py logical optional, intent(in) :: verbose
+!f2py logical optional, intent(in) :: verbose = .true.
   LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
 ! Output variables:
@@ -248,7 +248,7 @@ END SUBROUTINE vars
 
 !>    This is the subroutine that does the actual computations
 !!    This subroutine is only called internaly (i.e. by other Mocsy subroutines)
-!!    Its output parameter "Practical Salinity", when Absolute Salinity is passed in.
+!!    Its output parameter is "Practical Salinity", when Absolute Salinity is passed in,
 !!    is used by those internal calling routines.
 !!
 SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis,  &
@@ -298,16 +298,16 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
   CHARACTER(7), INTENT(in) :: optT
   !> for depth input, choose \b "db" for decibars (in situ pressure) or \b "m" for meters (pressure is computed, needed for models)
   CHARACTER(2), INTENT(in) :: optP
-  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) or \b 'l10' (Lee et al., 2010).
+  !> for total boron, choose either \b 'u74' (Uppstrom, 1974) [default] or \b 'l10' (Lee et al., 2010).
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-!f2py character*3 optional, intent(in) :: optB='l10'
+!f2py character*3 optional, intent(in) :: optB='u74'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optB
-  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
+  !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) [default] or \b 'dg' (Dickson & Riley, 1979)
 !f2py character*2 optional, intent(in) :: optKf='pf'
   CHARACTER(2), OPTIONAL, INTENT(in) :: optKf
-  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) or \b 'm10' (Millero, 2010) 
+  !> for K1,K2 choose either \b 'l' (Lueker et al., 2000) [default] or \b 'm10' (Millero, 2010) 
 !f2py character*3 optional, intent(in) :: optK1K2='l'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optK1K2
   !> for K0,fugacity coefficient choose either \b 'Ppot' (no pressure correction) or \b 'Pinsitu' (with pressure correction) 
@@ -317,11 +317,12 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(*), OPTIONAL, INTENT(in) :: optGAS
   !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
-!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
-  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+!f2py character*4 optional, intent(in) :: optS='Sprc'
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
-!f2py logical optional, intent(in) :: verbose
+!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+  REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
+!f2py logical optional, intent(in) :: verbose=.true.
   LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
 ! Output variables:
@@ -396,32 +397,22 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
 ! Note:  Optional arguments with f2py (python) are set above with 
 !        the !f2py statements that precede each type declaraion
   IF (PRESENT(optB)) THEN
-!   print *,"optB present:"
-!   print *,"optB = ", optB 
     opB = optB
   ELSE
-!   Default is Lee et al (2010) for total boron
-!   print *,"optB NOT present:"
-    opB = 'l10'
-!   print *,"opB = ", opB 
+!   Default is Uppstrom (1974) for total boron
+    opB = 'u74'
   ENDIF
   IF (PRESENT(optKf)) THEN
-!   print *,"optKf = ", optKf
     opKf = optKf
   ELSE
-!   print *,"optKf NOT present:"
 !   Default is Perez & Fraga (1987) for Kf
     opKf = 'pf'
-!   print *,"opKf = ", opKf
   ENDIF
   IF (PRESENT(optK1K2)) THEN
-!   print *,"optK1K2 = ", optK1K2
     opK1K2 = optK1K2
   ELSE
-!   print *,"optK1K2 NOT present:"
 !   Default is Lueker et al. 2000) for K1 & K2
     opK1K2 = 'l'
-!   print *,"opK1K2 = ", opK1K2
   ENDIF
   IF (PRESENT(optGAS)) THEN
     opGAS = optGAS
@@ -615,7 +606,7 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
            ! If longitude is passed in
            IF (PRESENT(lon)) THEN
                p1(1) = p(i)
-               IF (lon(i) .NE. 1e20_rx .AND. lat(i) .NE. 1.e20_rx) THEN
+               IF (lon(i) .NE. 1.e20_rx) THEN
                   ! longitude and latitude are defined
                   lon1(1) = lon(i)
                   lat1(1) = lat(i)
@@ -809,9 +800,11 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
   !> choose \b 'Sprc' for practical sal. (EOS-80, default) or \b 'Sabs' for absolute salinity (TEOS-10)
-  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+!f2py character*4 optional, intent(in) :: optS='Sprc'
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+  REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
 !f2py logical optional, intent(in) :: verbose
   LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
@@ -1097,7 +1090,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
            ! If longitude is passed in
            IF (PRESENT(lon)) THEN
                p1(1) = p
-               IF (lon(i) .NE. 1e20_rx .AND. lat(i) .NE. 1.e20_rx) THEN
+               IF (lon(i) .NE. 1e20_rx) THEN
                   ! longitude and latitude are defined
                   lon1(1) = lon(i)
                   lat1(1) = lat(i)

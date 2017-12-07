@@ -179,7 +179,7 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !! The 'l10' formulation is based on 139 measurements (instead of 20), 
   !! uses a more accurate method, and
   !! generally increases total boron in seawater by 4% 
-!f2py character*3 optional, intent(in) :: optB='l10'
+!f2py character*3 optional, intent(in) :: optB='u74'
   CHARACTER(3), OPTIONAL, INTENT(in) :: optB
   !> for Kf, choose either \b 'pf' (Perez & Fraga, 1987) or \b 'dg' (Dickson & Riley, 1979)
 !f2py character*2 optional, intent(in) :: optKf='pf'
@@ -193,10 +193,11 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   !! with 'Pinsitu' the fCO2 and pCO2 will be many times higher in the deep ocean
 !f2py character*7 optional, intent(in) :: optGAS='Pinsitu'
   CHARACTER(7), OPTIONAL, INTENT(in) :: optGAS
-!  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
-  CHARACTER(*), OPTIONAL, INTENT(in) :: optS
+!f2py character*7 optional, intent(in) :: optS='Sprc'
+  CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-  REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+  REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
 
 ! Output variables:
   !> derivative of H on the <b>total scale</b>
@@ -265,9 +266,10 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
   
 ! Arrays to pass optional arguments into or use defaults (Dickson et al., 2007)
   CHARACTER(3) :: opB
-  CHARACTER(2) :: opKf
   CHARACTER(3) :: opK1K2
+  CHARACTER(2) :: opKf
   CHARACTER(7) :: opGAS
+  CHARACTER(4) :: opS
 
   INTEGER :: i
   LOGICAL :: deriv_K    !  if one derives with respect to a dissoc constant
@@ -287,37 +289,32 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
 ! Note:  Optional arguments with f2py (python) are set above with 
 !        the !f2py statements that precede each type declaraion
   IF (PRESENT(optB)) THEN
-!   print *,"optB present:"
-!   print *,"optB = ", optB 
     opB = optB
   ELSE
-!   Default is Lee et al (2010) for total boron
-!   print *,"optB NOT present:"
-    opB = 'l10'
-!   print *,"opB = ", opB 
+!   Default is Uppstrom (1974) for total boron
+    opB = 'u74'
   ENDIF
   IF (PRESENT(optKf)) THEN
-!   print *,"optKf = ", optKf
     opKf = optKf
   ELSE
-!   print *,"optKf NOT present:"
 !   Default is Perez & Fraga (1987) for Kf
     opKf = 'pf'
-!   print *,"opKf = ", opKf
   ENDIF
   IF (PRESENT(optK1K2)) THEN
-!   print *,"optK1K2 = ", optK1K2
     opK1K2 = optK1K2
   ELSE
-!   print *,"optK1K2 NOT present:"
 !   Default is Lueker et al. 2000) for K1 & K2
     opK1K2 = 'l'
-!   print *,"opK1K2 = ", opK1K2
   ENDIF
   IF (PRESENT(optGAS)) THEN
     opGAS = optGAS
   ELSE
     opGAS = 'Pinsitu'
+  ENDIF
+  IF (PRESENT(optS)) THEN
+    opS = optS
+  ELSE
+    opS = 'Sprc'
   ENDIF
 
   SELECT CASE (derivar)
