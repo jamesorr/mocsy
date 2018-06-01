@@ -285,7 +285,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   ELSE
      opGAS = 'Pinsitu'
   ENDIF
-  IF (.NOT. PRESENT(optS)) THEN
+  IF (PRESENT(optS)) THEN
      opS = optS
   ELSE
      opS = 'Sprc'
