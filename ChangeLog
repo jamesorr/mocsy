@@ -1,8 +1,9 @@
 ChangeLog
 
 version 2.3.8, 2018-06-01
------------------------------------
-	- errors - changed default uncertainties for equil constants & eBt
+	----------------------------------- 
+	- errors: removed .NOT. in PRESENT clause for optS
+	- errors & test_errors: changed default uncertainties for epK & eBt
 	- modified f2py directives for real arrays in many routines (mocsy now compiles)
 
 version 2.3.7, 2017-12-08
