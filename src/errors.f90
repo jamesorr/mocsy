@@ -44,11 +44,11 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 !
 !       epK is optional :  if not given, following default error values will be taken :
 !                   pK0     pK1    pK2,   pKb    pKw    pKspa   pKspc
-!                   0.004   0.015  0.03   0.01   0.01   0.02    0.02 
+!                   0.002   0.0075  0.015   0.01   0.01   0.02    0.02 
 !
 !       ebt is optional :  if not given, the default error is 0.01 (i.e., 1%)
 !                   Bt (rel. err)
-!                   0.01
+!                   0.02
 !    
 !     INPUT options:
 !     ==============
@@ -119,14 +119,14 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !> standard error (or uncertainty) on Phosphate total concentrations
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: ephos
   !> standard error (or uncertainty) on all seven dissociation constants (a vector)
-!!!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.004,0.015,0.03,0.01,0.01,0.02,0.02)
+!!!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.002,0.0075,0.015,0.01,0.01,0.02,0.02)
   REAL(kind=rx), INTENT(in), OPTIONAL, DIMENSION(7) :: epK
-!f2py optional :: epK=(0.004,0.015,0.03,0.01,0.01,0.02,0.02)
+!f2py optional :: epK=(0.002,0.0075,0.015,0.01,0.01,0.02,0.02)
   !> correlation coefficient (-1 < r < 1) for correlation between ALK and DIC (zero by default)
 !f2py  real intent(in), optional :: r = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in) :: r
   !> standard error (or uncertainty) on total boron (Bt) - a single number, not a vector like other errors
-!f2py  real intent(in), optional :: ebt=0.01
+!f2py  real intent(in), optional :: ebt=0.02
   REAL(kind=rx), OPTIONAL, INTENT(in) :: ebt 
 
   !> choose either \b 'mol/kg' (std DATA units) or \b 'mol/m3' (std MODEL units) to select 
@@ -182,8 +182,8 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 ! Local variables
 
   ! Default value for errors on pK
-  REAL(kind=rx), DIMENSION(7) :: epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
-  REAL(kind=rx), DIMENSION(7) :: epKstd = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  REAL(kind=rx), DIMENSION(7) :: epK_local = (/0.002_r8, 0.0075_r8, 0.015_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+  REAL(kind=rx), DIMENSION(7) :: epKstd = (/0.002_r8, 0.0075_r8, 0.015_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
   REAL(kind=rx), DIMENSION(7) :: epKzero
 ! REAL(kind=rx), DIMENSION(7) :: epKstd
 ! Extend epK_local by 1 to later include error for Bt (simplifies coding)
@@ -192,7 +192,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 ! CHARACTER*3, DIMENSION(7) :: Kid = (/'k0 ','k1 ','k2 ','kb ','kw ','ka ','kc '/)
 
   ! Default value for error on Total Boron (ebt)
-  REAL(kind=rx) :: ebt_local = 0.01_rx
+  REAL(kind=rx) :: ebt_local = 0.02_rx
 ! REAL(kind=rx) :: ebt_local 
 
   ! Default value for correlation between ALK & DIC
@@ -253,7 +253,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 ! Note:  Optional arguments with f2py (python) are set above with 
 !        the !f2py statements that precede each type declaraion
 
-  epKstd = (/0.004d0, 0.015d0, 0.03d0, 0.01d0, 0.01d0, 0.02d0, 0.02d0/)
+  epKstd = (/0.002d0, 0.0075d0, 0.015d0, 0.01d0, 0.01d0, 0.02d0, 0.02d0/)
   epK_local(:) = epKstd(:)
   epKzero = epKstd * 0.0
 
@@ -314,12 +314,12 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
          ENDIF
      ENDIF
   ELSE
-     epK_local = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+     epK_local = (/0.002_r8, 0.0075_r8, 0.015_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
   ENDIF
   IF (PRESENT(ebt)) THEN
      ebt_local = ebt
   ELSE
-     ebt_local = 0.01_rx
+     ebt_local = 0.02_rx
   ENDIF
   
   ! initialise total square error
