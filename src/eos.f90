@@ -174,14 +174,18 @@ IMPLICIT NONE
   !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: SA
   !> P: Sea water pressure in dbar (optional, default = 0)
-!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
+!f2py optional :: p = 0.0
+!
   !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.0
   !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
-!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
+!f2py optional :: lat = 0.0
 
 ! Output variables:
   !> SP: Practical Salinity on the practical salinity scale
@@ -374,14 +378,17 @@ IMPLICIT NONE
   !> SP: Practical Salinity on the practical salinity scale
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: SP
   !> P: Sea water pressure in dbar (optional, default = 0)
-!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
+!f2py optional :: p = 0.0
   !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.0
   !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
-!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
+!f2py optional :: lat = -25.0
 
 ! Output variables:
   !>  SA: Absolute Salinity (g/kg)
@@ -580,14 +587,17 @@ IMPLICIT NONE
   !> SA: Absolute Salinity (g/kg)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: SA
   !> P: Sea water pressure in dbar (optional, default = 0)
-!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
+!f2py optional :: p = 0.0
   !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.0
   !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
-!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
+!f2py optional :: lat = 0.0
 
 ! Output variables:
   !> SP: Practical Salinity on the practical salinity scale
@@ -673,14 +683,17 @@ IMPLICIT NONE
   !> T: in-situ temperature in deg. C
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: T
   !> P: Sea water pressure in dbar (optional, default = 0)
-!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: p = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: P
+!f2py optional :: p = 0.0
   !> lon: Longitude, optional, in decimal degrees [ 0 ... +360 ] or [ -180 ... +180 ]
-!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lon = -25.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.0
   !> lat: Latitude, optional, in decimal degrees [-90 ... 90]
-!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
+!!!f2py real(8) intent(in), optional, dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
+!f2py optional :: lat = 0.0
 
 ! Output variables:
   !> CvT: Conservative Temperature (deg C)

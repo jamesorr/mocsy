@@ -196,8 +196,9 @@ SUBROUTINE derivnum (dh_dx, dpco2_dx, dfco2_dx, dco2_dx, dhco3_dx,              
 !f2py character*7 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
 
 ! Output variables:
   !> derivative of H on the <b>total scale</b>

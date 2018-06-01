@@ -201,10 +201,11 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
 !f2py character(4) optional, intent(in) :: optS = 'Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
   !> to print warnings when input out of bounds, use .true.; for no warnings, use .false.
-!f2py logical optional, intent(in) :: verbose = .true.
+!!!f2py logical optional, intent(in) :: verbose = .true.
   LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
 ! Output variables:
@@ -320,8 +321,10 @@ SUBROUTINE vars_sprac (ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rh
 !f2py character*4 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
+!
 !f2py logical optional, intent(in) :: verbose=.true.
   LOGICAL, OPTIONAL, INTENT(in) :: verbose
 
@@ -748,7 +751,7 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
 
 ! Input variables
   !>     number of records
-!f2py optional , depend(sal) :: n=len(sal)
+!f2py integer optional , depend(sal) :: n=len(sal)
   INTEGER, INTENT(in) :: N
   !> either <b>in situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) <b>[degree C]</b>
@@ -803,8 +806,10 @@ SUBROUTINE vars_pertK(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC,       &
 !f2py character*4 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in), DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
+!
 !f2py logical optional, intent(in) :: verbose
   LOGICAL, OPTIONAL, INTENT(in) :: verbose
 

@@ -111,7 +111,7 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 
 ! Input variables
   !>     number of records
-!f2py intent(hide) n
+!f2py integer intent(hide), depend(temp) :: n=len(temp)
   INTEGER, INTENT(in) :: N
   !> in <b>situ temperature</b> (when optT='Tinsitu', typical data) 
   !! OR <b>potential temperature</b> (when optT='Tpot', typical models) [degree C]
@@ -153,8 +153,9 @@ SUBROUTINE constants(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !f2py character*4 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
 
 ! Ouput variables
   !> solubility of CO2 in seawater (Weiss, 1974), also known as K0
@@ -823,7 +824,7 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
   REAL(kind=rx), INTENT(in),    DIMENSION(N) :: lat
   !> salinity <b>[psu]</b>
   TYPE(DUAL_NUM), INTENT(in), DIMENSION(N) :: sal
-!f2py optional , depend(sal) :: n=len(sal)
+!f2py integer intent(hide), depend(sal) :: n=len(sal)
 
   !> atmospheric pressure <b>[atm]</b>
   TYPE(DUAL_NUM), INTENT(in), DIMENSION(N) :: Patm
@@ -855,8 +856,9 @@ SUBROUTINE constants_DNAD(K0, K1, K2, Kb, Kw, Ks, Kf, Kspc, Kspa,  &
 !f2py character*4 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
 
 ! Ouput variables
   !> solubility of CO2 in seawater (Weiss, 1974), also known as K0

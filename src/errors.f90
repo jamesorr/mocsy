@@ -119,8 +119,9 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !> standard error (or uncertainty) on Phosphate total concentrations
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: ephos
   !> standard error (or uncertainty) on all seven dissociation constants (a vector)
-!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.004,0.015,0.03,0.01,0.01,0.02,0.02)
+!!!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.004,0.015,0.03,0.01,0.01,0.02,0.02)
   REAL(kind=rx), INTENT(in), OPTIONAL, DIMENSION(7) :: epK
+!f2py optional :: epK=(0.004,0.015,0.03,0.01,0.01,0.02,0.02)
   !> correlation coefficient (-1 < r < 1) for correlation between ALK and DIC (zero by default)
 !f2py  real intent(in), optional :: r = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in) :: r
@@ -156,8 +157,9 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 !f2py character*7 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
 
 ! Output variables:
   !> total error to [H+] concentration  (mol/kg) on the <b>total scale</b>

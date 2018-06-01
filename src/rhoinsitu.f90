@@ -28,7 +28,8 @@ SUBROUTINE rhoinsitu(salt, tempis, pdbar, N, rhois)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: tempis
   !> pressure [db]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: pdbar
-!f2py optional , depend(salt) :: n=len(salt)
+!!!f2py optional , depend(salt) :: n=len(salt)
+!f2py depend(salt) :: n=len(salt)
 
 ! OUTPUT variables:
   ! rhois  = in situ density

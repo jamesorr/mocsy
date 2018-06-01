@@ -201,11 +201,13 @@ SUBROUTINE flxco2(co2flux, co2ex, dpco2,                                        
 !f2py character*4 optional, intent(in) :: optS='Sprc'
   CHARACTER(4), OPTIONAL, INTENT(in) :: optS
   !> longitude <b>[degrees east]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
+!!!f2py real(8) optional, intent(in), dimension(n) :: lon = -25.
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lon
+!f2py optional :: lon = -25.
   !> latitude <b>[degrees north]</b>
-!f2py real(8) optional, intent(in), dimension(n) :: lat = 0.0
+!!!f2py real(8) optional, intent(in), dimension(n) :: lat = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in),    DIMENSION(N) :: lat
+!f2py optional :: lat = 0.
 
 ! Output variables:
   !> air-to-sea CO2 flux <b>[mol/(m^2 * s)]</b>
@@ -394,7 +396,8 @@ SUBROUTINE pCO2atm2xCO2(pCO2atm, temp, salt, Patm, N, xCO2)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !> atmospheric pressure [atm]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
-!f2py optional , depend(temp) :: n=len(temp)
+!!!f2py integer optional , depend(temp) :: n=len(temp)
+!f2py depend(temp) :: n
 
 ! OUTPUT variables:
   !> mole fraction of CO2 [ppm]
@@ -436,7 +439,8 @@ SUBROUTINE pistonvel(windspeed, Fice, N, kw660)
   REAL(kind=r8), INTENT(in), DIMENSION(N) :: windspeed
   !> modeled sea-ice cover: fraction of grid cell, varying between 0.0 (no ice) and 1.0 (full cover)
   REAL(kind=r8), INTENT(in), DIMENSION(N) :: Fice
-!f2py optional , depend(windspeed) :: n=len(windspeed)
+!!!f2py integer optional , depend(windspeed) :: n=len(windspeed)
+!f2py depend(windspeed) :: n
 
 ! OUTPUT variables:
   !> piston velocity at 25°C [m/s], uncorrected by the Schmidt number for different temperatures
@@ -571,7 +575,8 @@ SUBROUTINE x2pCO2atm(xCO2, temp, salt, Patm, N, pCO2atm)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
   !> atmospheric pressure [atm]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: Patm
-!f2py optional , depend(temp) :: n=len(temp)
+!!!f2py integer optional, depend(temp) :: n=len(temp)
+!f2py depend(temp) :: n
 
 ! OUTPUT variables:
   !> oceanic partial pressure of CO2 [uatm] 
@@ -628,7 +633,8 @@ SUBROUTINE phizero(gasname, temp, salt, N, phi0)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
-  !f2py optional , depend(temp) :: n=len(temp)
+  !!!f2py optional , depend(temp) :: n=len(temp)
+  !f2py depend(temp) :: n
   !> name of gas: 'cfc11', 'cfc12', 'sf6', 'co2', or 'n2o'
   CHARACTER(*), INTENT(in) :: gasname
 
@@ -727,7 +733,8 @@ SUBROUTINE kprime(gasname, temp, salt, N, kp)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
-  !f2py optional , depend(temp) :: n=len(temp)
+  !!!f2py optional , depend(temp) :: n=len(temp)
+  !f2py depend(temp) :: n
 
   !> name of gas: 'cfc11', 'cfc12', or 'sf6'
   CHARACTER(*), INTENT(in) :: gasname
@@ -816,7 +823,8 @@ SUBROUTINE kzero(gasname, temp, salt, N, k0)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
-  !f2py optional , depend(temp) :: n=len(temp)
+  !!!f2py optional , depend(temp) :: n=len(temp)
+  !f2py depend(temp) :: n
 
   !> name of gas: 'co2' or 'n2o'
   CHARACTER(*), INTENT(in) :: gasname
@@ -891,7 +899,8 @@ SUBROUTINE vapress(temp, salt, N, vpsw)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: temp
   !> salinity [psu]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: salt
-!f2py optional , depend(temp) :: n=len(temp)
+!!!f2py optional , depend(temp) :: n=len(temp)
+!f2py depend(temp) :: n
 
 ! OUTPUT variables:
   !> vapor pressure of seawater [atm] 
@@ -946,7 +955,8 @@ SUBROUTINE o2sato(T, S, N, o2sat_molm3)
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: T
   !> surface salinity [psu]
   REAL(kind=rx), INTENT(in), DIMENSION(N) :: S
-!f2py optional , depend(temp) :: n=len(temp)
+!!!f2py optional , depend(temp) :: n=len(temp)
+!f2py depend(temp) :: n
 
 ! OUTPUT variables:
   !> O2 saturation concentration of seawater [mol/m3] 
@@ -1043,7 +1053,8 @@ SUBROUTINE o2flux(T, S, kw660, ppo, o2, dz1, N, o2ex)
   REAL(kind=r8), INTENT(in), DIMENSION(N) :: o2
   !> thickness of surface grid box [m]
   REAL(kind=r8), INTENT(in), DIMENSION(N) :: dz1
-!f2py optional , depend(temp) :: n=len(temp)
+!!!f2py optional , depend(temp) :: n=len(temp)
+!f2py depend(temp) :: n
 
 ! OUTPUT variables:
   !> rate of change of dissolved O2 in the surface layer due to air-sea O2 exchange [mol/(m^3*s)]
