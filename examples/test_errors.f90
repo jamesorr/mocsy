@@ -38,10 +38,10 @@ PROGRAM test_errors
     phos_e(:) = 0.1d-6
     sil_e(:)  = 4.0d-6    
  !  epK(:)    = 0.0
- !  epK = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
-    epKstd = (/0.004_r8, 0.015_r8, 0.03_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+ !  epK = (/0.002_r8, 0.0075_r8, 0.015_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
+    epKstd = (/0.002_r8, 0.0075_r8, 0.015_r8, 0.01_r8, 0.01_r8, 0.02_r8, 0.02_r8/)
     epK0 = epKstd * 0.0d0
-    ebt = 0.01_rx
+    ebt = 0.02_rx
 
    ! ------------------
    ! 1s test : 1 record 
@@ -93,7 +93,7 @@ PROGRAM test_errors
    write (*,*) " "
 
 !  -----------------------------------------------------------------------------------------------------------------------------
-   write (*,*) "Test 3: Default error on constants and Bt (ebt = 0.01): both specified"
+   write (*,*) "Test 3: Default error on constants and Bt (ebt = 0.02): both specified"
 !  -----------------------------------------------------------------------------------------------------------------------------
    call errors(eh, epco2, efco2, eco2, ehco3, eco3, eOmegaA, eOmegaC,          &  ! OUTPUT
              temp, sal, alk, dic, sil, phos, Patm, depth, lat, 1,              &  ! INPUT
