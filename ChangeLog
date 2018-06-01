@@ -1,5 +1,10 @@
 ChangeLog
 
+version 2.3.8, 2018-06-01
+-----------------------------------
+	- errors - changed default uncertainties for equil constants & eBt
+	- modified f2py directives for real arrays in many routines (mocsy now compiles)
+
 version 2.3.7, 2017-12-08
 -----------------------------------
 	- cleaned PRESENT clauses & set some f2py defaults
