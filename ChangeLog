@@ -1,7 +1,11 @@
 ChangeLog
 
+version 2.3.9, 2018-06-07
+	-----------------------------------
+	- modified !f2py statement for errors.f90 to  properly set defaults in python
+
 version 2.3.8, 2018-06-01
-	----------------------------------- 
+	-----------------------------------
 	- errors: removed .NOT. in PRESENT clause for optS
 	- errors & test_errors: changed default uncertainties for epK & eBt
 	- modified f2py directives for real arrays in many routines (mocsy now compiles)
