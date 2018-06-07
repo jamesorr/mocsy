@@ -46,7 +46,7 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
 !                   pK0     pK1    pK2,   pKb    pKw    pKspa   pKspc
 !                   0.002   0.0075  0.015   0.01   0.01   0.02    0.02 
 !
-!       ebt is optional :  if not given, the default error is 0.01 (i.e., 1%)
+!       ebt is optional :  if not given, the default error is 0.02 (i.e., 2%)
 !                   Bt (rel. err)
 !                   0.02
 !    
@@ -121,7 +121,8 @@ SUBROUTINE errors  (eH, epCO2, efCO2, eCO2, eHCO3, eCO3, eOmegaA, eOmegaC,    &
   !> standard error (or uncertainty) on all seven dissociation constants (a vector)
 !!!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.002,0.0075,0.015,0.01,0.01,0.02,0.02)
   REAL(kind=rx), INTENT(in), OPTIONAL, DIMENSION(7) :: epK
-!f2py optional :: epK=(0.002,0.0075,0.015,0.01,0.01,0.02,0.02)
+!f2py real(8) intent(in), optional, dimension(7) :: epK=(0.002,0.0075,0.015,0.01,0.01,0.02,0.02)
+!!!f2py optional :: epK=(0.002,0.0075,0.015,0.01,0.01,0.02,0.02)
   !> correlation coefficient (-1 < r < 1) for correlation between ALK and DIC (zero by default)
 !f2py  real intent(in), optional :: r = 0.0
   REAL(kind=rx), OPTIONAL, INTENT(in) :: r
