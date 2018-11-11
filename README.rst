@@ -18,11 +18,11 @@ compute sensitivities of derived variables to input variables (DIC,
 total alkalinity, temperature, salinity, total dissoloved inorganic
 phosphorus, and total dissolved silion).
 
-**Documentaion and Examples**
+**Documentation and Examples**
 
 * Documentation: http://ocmip5.ipsl.jussieu.fr/mocsy/
-* example scripts: see `examples` directory
-* Jupyter notebooks (*interactive* examples): see  `notebooks` directory
+* Example scripts: see *examples* directory
+* Jupyter notebooks (interactive examples): see  *notebooks* directory
 
 **REFERENCES**
 
