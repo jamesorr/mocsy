@@ -16,7 +16,7 @@
 PRECISION = 2
 #PRECISION = 1
 
-# mapping between Fortran and C types
+# mapping between Fortran and C types (for f2py)
 ifeq (${PRECISION}, 2)
     KIND_MAP = kind_map_d
 else
@@ -194,7 +194,7 @@ test_kzero: $(library) test_kzero.o
 .PHONY: clean veryclean
 
 clean:
-	rm -f *.o src/*.o $(GSW)/*.o *.mod *.so *.a src/singledouble.f90
+	rm -f *.o src/*.o $(GSW)/*.o *.mod *.a src/singledouble.f90
 
 veryclean: clean
 	rm -f *~ $(PROGRAMS) 
