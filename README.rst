@@ -11,7 +11,7 @@ best-practice constants as well as more recent options. It agrees with
 CO2SYS within 0.005%.
 
 The mocsy package is described by Orr and Epitalon (2015) and has been
-compared to other packages that compute marine carbonate chemistry by
+compared to other packages that compute marine carbonate chemistry
 (Orr et al., 2015).  More recently, new routinnes were added to
 propagate uncertainties and compute sensitivities of derived variables
 to input variables (Orr et al., 2018)
