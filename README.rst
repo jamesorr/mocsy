@@ -16,7 +16,7 @@ Orr et al. (2015).  More recently, mocsy was expanded by Orr et
 al. (2018) who added new routines to propagate uncertainties and
 compute sensitivities of derived variables to input variables (DIC,
 total alkalinity, temperature, salinity, total dissoloved inorganic
-phosphorus, and total dissolved silion).
+phosphorus, and total dissolved silicon).
 
 **Documentation and Examples**
 
