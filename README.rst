@@ -15,7 +15,7 @@ compared to other packages that compute marine carbonate chemistry by
 Orr et al. (2015).  More recently, mocsy was expanded by Orr et
 al. (2018) who added new routines to propagate uncertainties and
 compute sensitivities of derived variables to input variables (DIC,
-total alkalinity, temperature, salinity, total dissoloved inorganic
+total alkalinity, temperature, salinity, total dissolved inorganic
 phosphorus, and total dissolved silicon).
 
 **Documentation and Examples**
@@ -37,6 +37,4 @@ packages that compute ocean carbonate chemistry, Biogeosciences, 12,
 Orr, J.C., J.-M. Epitalon, A. G. Dickson, and J.-P. Gattuso (2018) Routine
 uncertainty propagation for the marine carbon dioxide system, in prep. for
 Mar. Chem., in press, https://doi.org/10.1016/j.marchem.2018.10.006 .
-
-
 
