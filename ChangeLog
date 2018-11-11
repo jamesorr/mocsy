@@ -1,5 +1,10 @@
 ChangeLog
 
+version 2.4.0, 2018-11-11
+	-----------------------------------
+	- improved README, adding References and pointing to Doc and Examples
+	- added new jupyter notebook for demonstrating use of errors routine
+
 version 2.3.9, 2018-06-07
 	-----------------------------------
 	- modified !f2py statement for errors.f90 to  properly set defaults in python
