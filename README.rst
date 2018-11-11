@@ -12,11 +12,9 @@ CO2SYS within 0.005%.
 
 The mocsy package is described by Orr and Epitalon (2015) and has been
 compared to other packages that compute marine carbonate chemistry by
-Orr et al. (2015).  More recently, mocsy was expanded by Orr et
-al. (2018) who added new routines to propagate uncertainties and
-compute sensitivities of derived variables to input variables (DIC,
-total alkalinity, temperature, salinity, total dissolved inorganic
-phosphorus, and total dissolved silicon).
+(Orr et al., 2015).  More recently, new routinnes were added to
+propagate uncertainties and compute sensitivities of derived variables
+to input variables (Orr et al., 2018)
 
 **Documentation and Examples**
 
