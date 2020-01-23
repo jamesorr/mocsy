@@ -26,10 +26,11 @@ real (r8), intent(in) :: p, long, lat
 real (r8) :: gsw_saar
 
 integer :: indx0, indy0, indz0, i, j, k, nmean
+integer :: ndepth_max
 
 real (r8), dimension(4) :: saar, saar_old
 real (r8) :: p0_original, lon0_in, sa_upper, sa_lower, dlong, dlat
-real (r8) :: r1, s1, t1, saar_mean, ndepth_max, p_tmp, long_tmp
+real (r8) :: r1, s1, t1, saar_mean, p_tmp, long_tmp
 
 character (*), parameter :: func_name = "gsw_saar"
 
@@ -53,24 +54,26 @@ if (indy0.eq.ny) indy0 = ny-1
 
 ! Look for the maximum valid "ndepth_ref" value around our point.
 ! Note: invalid "ndepth_ref" values are NaNs (a hangover from the codes
-! Matlab origins). These Nans will not satisfy the ".gt. 0.0" test below,
-! so will not be recognised as valid values.
-ndepth_max = -1.0_r8
+! Matlab origins), but we have replaced the NaNs with a value of 999,
+! hence we need an additional upper-limit check in the code below so they
+! will not be recognised as valid values.
+ndepth_max = -1
 do k = 1,4
-   if (ndepth_ref(indy0+delj(k),indx0+deli(k)).gt.0.0_r8) &
+   if ((ndepth_ref(indy0+delj(k),indx0+deli(k)).gt.0) .and. &
+       (ndepth_ref(indy0+delj(k),indx0+deli(k)).lt.999)) &
       ndepth_max = max(ndepth_max,ndepth_ref(indy0+delj(k),indx0+deli(k)))
 end do
 
 ! If we are a long way from the ocean then there will be no valid "ndepth_ref"
 ! values near the point (ie. surrounded by NaNs) - so just return SAAR = 0.0
-if (ndepth_max.eq.-1.0_r8) then
+if (ndepth_max.eq.-1) then
    gsw_saar = 0.0_r8 
    return
 end if 
 
 p0_original = p
 p_tmp = p
-if (p_tmp.gt.p_ref(int(ndepth_max))) p_tmp = p_ref(int(ndepth_max))
+if (p_tmp.gt.p_ref(ndepth_max)) p_tmp = p_ref(ndepth_max)
 call gsw_util_indx(p_ref,nz,p_tmp,indz0)
     
 r1 = (long_tmp-longs_ref(indx0))/(longs_ref(indx0+1)-longs_ref(indx0))
